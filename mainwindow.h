@@ -23,6 +23,8 @@ public:
 
 private:
     Ui::MainWindow *ui;
-    QSerialPort *serial;
+    QSerialPort *serial;//串口对象
+
+    QByteArray m_buffer;//全局接收缓冲区
 };
 #endif // MAINWINDOW_H

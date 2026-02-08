@@ -8,6 +8,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     serial = new QSerialPort(this);
+    //配置串口参数
     serial->setPortName("COM1");
     serial->setBaudRate(QSerialPort::Baud9600);
     serial->setDataBits(QSerialPort::Data8);
@@ -21,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
         qDebug() << "串口打开失败："<<serial->errorString();
     }
 
-    //note:串口接收缓冲区有数据,?
+    //串口接收缓冲区有数据,?
     connect(serial,&QSerialPort::readyRead,this,&MainWindow::onReadyRead);
 
     //发数据 qint64
@@ -38,28 +39,50 @@ MainWindow::~MainWindow()
 }
 
 void MainWindow::onReadyRead(){
-    // note:QByteArray data = serial->readAll();
-    // note:qDebug()<<"数据："<<data<<" "<<data.toHex(' ');
 
-    // 1. 读取所有缓冲区里的数据
-    QByteArray data = serial->readAll();
+    m_buffer.append(serial->readAll());//追加数据
+    if(m_buffer.size()<7){
+        qDebug()<<"banbao";
+    }
+    while(m_buffer.size()>=7){//当前协议最小包长度为7
 
-    // 2. 打印原始 Hex 数据
-    qDebug() << "收到数据(Hex):" << data.toHex(' ');
-
-    // 3. 简单解析验证
-    if (!data.isEmpty()) {
-        // 只发一包完整的数据
-        if (data.at(0) == (char)0xAA && data.at(1) == (char)0x55) {
-            qDebug() << "检测到帧头！";
-
-            // 提取功能码
-            if (data.size() > 2) {
-                unsigned char funcCode = (unsigned char)data.at(2);
-                if (funcCode == 0x01) {
-                    qDebug() << "这是温度数据";
-                }
-            }
+        //检测帧头，移除脏数据
+        if(m_buffer.at(0) != static_cast<char> (0xAA) || m_buffer.at(1) != static_cast<char>(0x55)){
+            m_buffer.remove(0,1);
+            continue;//直到找到帧头
         }
+        qDebug()<<"检测到帧头";
+        //是否断包,是则等待下一次readyRead
+        int datalen = static_cast<int> (m_buffer.at(3));
+        int packetSize = 2+1+1+datalen+1+1;
+        if(m_buffer.size()<packetSize){
+             qDebug()<<"banbao7";
+            break;
+        }
+
+        //提取整包
+        QByteArray packet = m_buffer.left(packetSize);
+
+        //-------------------开始解析数据-----------------
+        //帧尾
+        if(packet.at(packetSize-1)==static_cast<char>(0xFF)){
+            unsigned char funcCode =(unsigned char) packet.at(2);//?
+            QByteArray content = packet.mid(4, datalen);
+
+            if(funcCode == 0x01){//？
+                //1B 温度值
+                int temp =(unsigned char) content.at(0);
+                qDebug()<<"温度:"<<temp<<"oC";
+            }else if(funcCode == 0x02){
+                qDebug()<<"电机转速:";
+            }
+        }else{
+            qDebug()<<"【错误包】帧尾校验失败";
+        }
+
+        //删除已解析数据
+        qDebug()<<m_buffer.toHex(' ');
+        m_buffer.remove(0,packetSize);
+        qDebug()<<m_buffer.toHex(' ');
     }
 }

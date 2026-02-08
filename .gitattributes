@@ -1,3 +1,0 @@
-"*.cpp filter=remove_learning_notes" 
-"*.h filter=remove_learning_notes" 
-"*.ui filter=remove_learning_notes" 
