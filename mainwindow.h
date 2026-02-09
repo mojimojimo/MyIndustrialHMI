@@ -2,7 +2,6 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QtSerialPort>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -18,13 +17,19 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    //槽函数
-    void onReadyRead();
+public slots:
+    //void updateUI(int type,double value);
+    // 接收子线程的反馈
+    void onPortStatusChanged(bool isOpen);
+    void onDataReceived(int type, double value);
+
+signals:
+    void signalOpenSerial(QString portName,int baudRate);
+    void signalCloseSerial();
+
 
 private:
     Ui::MainWindow *ui;
-    QSerialPort *serial;//串口对象
 
-    QByteArray m_buffer;//全局接收缓冲区
 };
 #endif // MAINWINDOW_H

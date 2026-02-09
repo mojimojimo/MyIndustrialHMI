@@ -1,5 +1,9 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "serialworker.h"
+#include <QMessageBox>
+#include <QThread>
+#include <QLabel>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -7,82 +11,58 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    serial = new QSerialPort(this);
-    //配置串口参数
-    serial->setPortName("COM1");
-    serial->setBaudRate(QSerialPort::Baud9600);
-    serial->setDataBits(QSerialPort::Data8);
-    serial->setStopBits(QSerialPort::OneStop);
-    serial->setParity(QSerialPort::NoParity);
+    QThread *thread = new QThread(this);//内存泄漏
+    SerialWorker *worker = new SerialWorker;
+    worker->moveToThread(thread);
+    //qDebug()<<"sjsjd";
 
-    //打开串口
-    if(serial->open(QIODevice::ReadWrite)){//openmode?
-        qDebug() << "串口打开成功：COM1";
-    } else {
-        qDebug() << "串口打开失败："<<serial->errorString();
-    }
+    connect(this,&MainWindow::signalOpenSerial,worker,&SerialWorker::openSerialPort);
+    connect(this,&MainWindow::signalCloseSerial,worker,&SerialWorker::closeSerialPort);
 
-    //串口接收缓冲区有数据,?
-    connect(serial,&QSerialPort::readyRead,this,&MainWindow::onReadyRead);
+    connect(worker,&SerialWorker::portStatusChanged,this,&MainWindow::onPortStatusChanged);
+    connect(worker,&SerialWorker::dataReceived,this,&MainWindow::onDataReceived);
+    // connect(worker,&SerialWorker::errorOccuerred,[=](QString errorMsg){
+    //     QMessageBox::warning(this,"警告",errorMsg);
+    // });
 
-    //发数据 qint64
-    QByteArray sendData = QByteArray::fromHex("AA55020119FF");//AA 55 02 01 19 3F
-    serial->write(sendData);
+    //启动线程
+    thread->start();
+    connect(ui->btnOpen,&QPushButton::clicked,[=](){
+        QString port = ui->portList->currentText();
+        emit signalOpenSerial(port,9600);
+    });
+    connect(ui->btnClose,&QPushButton::clicked,[=](){
+        emit signalCloseSerial();
+    });
+
+    ui->portList->addItem("COM1");
+    ui->portList->addItem("COM2");
 }
 
 MainWindow::~MainWindow()
 {
-    if(serial->isOpen()){
-        serial->close();
-    }
+
     delete ui;
 }
 
-void MainWindow::onReadyRead(){
-
-    m_buffer.append(serial->readAll());//追加数据
-    if(m_buffer.size()<7){
-        qDebug()<<"banbao";
-    }
-    while(m_buffer.size()>=7){//当前协议最小包长度为7
-
-        //检测帧头，移除脏数据
-        if(m_buffer.at(0) != static_cast<char> (0xAA) || m_buffer.at(1) != static_cast<char>(0x55)){
-            m_buffer.remove(0,1);
-            continue;//直到找到帧头
-        }
-        qDebug()<<"检测到帧头";
-        //是否断包,是则等待下一次readyRead
-        int datalen = static_cast<int> (m_buffer.at(3));
-        int packetSize = 2+1+1+datalen+1+1;
-        if(m_buffer.size()<packetSize){
-             qDebug()<<"banbao7";
-            break;
-        }
-
-        //提取整包
-        QByteArray packet = m_buffer.left(packetSize);
-
-        //-------------------开始解析数据-----------------
-        //帧尾
-        if(packet.at(packetSize-1)==static_cast<char>(0xFF)){
-            unsigned char funcCode =(unsigned char) packet.at(2);//?
-            QByteArray content = packet.mid(4, datalen);
-
-            if(funcCode == 0x01){//？
-                //1B 温度值
-                int temp =(unsigned char) content.at(0);
-                qDebug()<<"温度:"<<temp<<"oC";
-            }else if(funcCode == 0x02){
-                qDebug()<<"电机转速:";
-            }
-        }else{
-            qDebug()<<"【错误包】帧尾校验失败";
-        }
-
-        //删除已解析数据
-        qDebug()<<m_buffer.toHex(' ');
-        m_buffer.remove(0,packetSize);
-        qDebug()<<m_buffer.toHex(' ');
+void MainWindow::onPortStatusChanged(bool isOpen){
+    if(isOpen){
+        ui->lblStatus->setText("已连接");
+        ui->lblStatus->setStyleSheet("color: green;");
+        ui->btnOpen->setEnabled(false);
+        ui->btnClose->setEnabled(true);
+    }else{
+        ui->lblStatus->setText("未连接");
+        ui->lblStatus->setStyleSheet("color: red;");
+        ui->btnOpen->setEnabled(true);
+        ui->btnClose->setEnabled(false);
     }
 }
+
+void MainWindow::onDataReceived(int type, double value){
+    if(type==1){
+         ui->lblTemp->setText(QString::number(value,'f',1) + " ℃ ");
+    }
+
+}
+
