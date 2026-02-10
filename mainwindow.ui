@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>605</width>
+    <height>481</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,10 +17,10 @@
    <widget class="QLabel" name="lblTemp">
     <property name="geometry">
      <rect>
-      <x>130</x>
-      <y>230</y>
-      <width>121</width>
-      <height>61</height>
+      <x>40</x>
+      <y>100</y>
+      <width>231</width>
+      <height>71</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -36,18 +36,18 @@
    <widget class="QComboBox" name="portList">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>60</y>
-      <width>67</width>
-      <height>22</height>
+      <x>20</x>
+      <y>20</y>
+      <width>141</width>
+      <height>21</height>
      </rect>
     </property>
    </widget>
    <widget class="QPushButton" name="btnClose">
     <property name="geometry">
      <rect>
-      <x>150</x>
-      <y>140</y>
+      <x>130</x>
+      <y>60</y>
       <width>75</width>
       <height>24</height>
      </rect>
@@ -59,8 +59,8 @@
    <widget class="QPushButton" name="btnOpen">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>140</y>
+      <x>20</x>
+      <y>60</y>
       <width>75</width>
       <height>24</height>
      </rect>
@@ -72,8 +72,8 @@
    <widget class="QLabel" name="lblStatus">
     <property name="geometry">
      <rect>
-      <x>260</x>
-      <y>140</y>
+      <x>200</x>
+      <y>20</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -85,13 +85,46 @@
      <string>未连接</string>
     </property>
    </widget>
+   <widget class="QComboBox" name="baudRateList">
+    <property name="geometry">
+     <rect>
+      <x>390</x>
+      <y>90</y>
+      <width>67</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPlainTextEdit" name="txtLog">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>190</y>
+      <width>351</width>
+      <height>181</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnSend">
+    <property name="geometry">
+     <rect>
+      <x>240</x>
+      <y>60</y>
+      <width>75</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>读取参数</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>605</width>
      <height>22</height>
     </rect>
    </property>

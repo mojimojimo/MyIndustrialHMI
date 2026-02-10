@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QThread>
+#include "serialworker.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -17,8 +19,9 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+
+
 public slots:
-    //void updateUI(int type,double value);
     // 接收子线程的反馈
     void onPortStatusChanged(bool isOpen);
     void onDataReceived(int type, double value);
@@ -26,10 +29,15 @@ public slots:
 signals:
     void signalOpenSerial(QString portName,int baudRate);
     void signalCloseSerial();
+    void signalSendData(QByteArray data);
 
 
 private:
     Ui::MainWindow *ui;
-
+    QThread *thread = nullptr;
+    QTimer * timer = nullptr;
+    void refreshPorts();
+    QByteArray buildPacket(char funcCode, const QByteArray &dataContent);//封包
+    void writeLog(const QString &text,bool isSend);//?
 };
 #endif // MAINWINDOW_H
