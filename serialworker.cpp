@@ -20,7 +20,7 @@ SerialWorker::~SerialWorker(){
 void SerialWorker::onReadyRead(){
     QByteArray data = serial->readAll();
     m_buffer.append(data);//追加数据
-    emit rawDataReceived(data.toHex(' '));
+    emit rawDataReceived(data.toHex(' ').toUpper());
     processData();
 }
 
@@ -108,15 +108,19 @@ void SerialWorker::processData(){
         for(int i=2;i<packetSize-2;++i){
             calSum += static_cast<unsigned char> (packet.at(i));
         }
+        //calSum = calSum & 0xFF;
         unsigned char revSum = static_cast<unsigned char>(packet.at(packetSize-2));
         if(calSum == revSum){
             unsigned char funcCode = static_cast<unsigned char> (packet.at(2));
             QByteArray content = packet.mid(4, datalen);
             if(funcCode == 0x01){//整型提升
-                if(content.size()>0){
+                if(content.size()>=2){
                     //1B 温度值
-                    double temp =static_cast<unsigned char>( content.at(0));//?-3°C?
-                    emit dataReceived(1,temp);
+                    unsigned char highByte = static_cast<unsigned char>( content.at(0));//?-3°C?
+                    unsigned char lowByte = static_cast<unsigned char>( content.at(1));//?-3°C?
+                    short temp = (highByte<<8) | lowByte;
+                    double realTemp = temp / 10.0;
+                    emit dataReceived(1,realTemp);
                     qDebug()<<"温度:"<<temp<<" ℃ ";
                 }
             }else if(funcCode == 0x02){

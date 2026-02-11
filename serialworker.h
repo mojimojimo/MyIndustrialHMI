@@ -25,7 +25,7 @@ signals://?
     void portStatusChanged(bool isOpen);
     void errorOccuerred(QString errorMsg);
     void dataReceived(int type,double value);
-    void rawDataReceived(QString s);//
+    void rawDataReceived(QString rawdata);//
 
 private:
     QSerialPort *serial;//串口对象

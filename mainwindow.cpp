@@ -5,6 +5,8 @@
 #include <QLabel>
 #include <QTimer>
 #include <QDateTime>
+#include <QSharedPointer>
+#include "qcustomplot.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -12,7 +14,21 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     refreshPorts();
+    initChart();
+    ui->targetTemp->setDecimals(1);
+    ui->targetTemp->setRange(-20.0,100.0);
 
+    connect(ui->btnSetTemp,&QPushButton::clicked,[=](){
+        double val = ui->targetTemp->value();
+        short sendVal = static_cast<short>(val*10);//定点数传输
+
+        QByteArray data;
+        data.append(static_cast<char>(sendVal>>8));//?
+        data.append(static_cast<char>(sendVal & 0xFF));
+        QByteArray packet = buildPacket(0x10,data);
+        emit signalSendData(packet);
+        writeLog("下发目标温度："+packet.toHex(' ').toUpper(),true);//C2137
+    });
     thread = new QThread;//内存泄漏
     SerialWorker *worker = new SerialWorker;
     worker->moveToThread(thread);
@@ -27,8 +43,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(worker,&SerialWorker::errorOccuerred,this,[=](QString errorMsg){//我靠要指定this?
         QMessageBox::critical(this,"警告","串口打开失败" + errorMsg);
     });
-    connect(worker,&SerialWorker::rawDataReceived,this,[=](QString s){
-        writeLog(s,false);//接收
+    connect(worker,&SerialWorker::rawDataReceived,this,[=](QString rawdata){
+        if (ui->chkHexDisplay->isChecked()) {    //原始日志 (Hex View)
+            QString hexLog = "原始数据: " + rawdata;
+            writeLog(hexLog, false);//接收
+        }
     });
 
 
@@ -91,8 +110,20 @@ void MainWindow::onPortStatusChanged(bool isOpen){
 void MainWindow::onDataReceived(int type, double value){
     if(type==1){
          ui->lblTemp->setText(QString::number(value,'f',1) + " ℃ ");
+         QString cleanLog = QString("解析成功：温度 = %1 ℃").arg(value);//业务日志 (Text View)
+         writeLog(cleanLog, false);
     }
-    //ui->logTextEdit->setText(logStr);
+
+    // 获取当前时间戳 (秒)
+    double key = QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0;
+    // 添加数据点
+    ui->plotTemp->graph(0)->addData(key, value);
+    // 移除太老的数据 (比如只保留最近 100 个点，防止内存爆掉)
+    //ui->plotTemp->graph(0)->data()->removeBefore(key - 100);
+    // 自动调整 X 轴范围，让它跟着时间走
+    ui->plotTemp->xAxis->setRange(key, 60, Qt::AlignRight); // 显示最近60秒
+    // 刷新重绘
+    ui->plotTemp->replot();
 }
 
 void MainWindow::refreshPorts(){
@@ -116,11 +147,13 @@ QByteArray MainWindow::buildPacket(char funcCode, const QByteArray &dataContent)
 
     //计算校验和
     unsigned char sum =0;
-    sum+=(unsigned char)funcCode;
-    sum+=(unsigned char)dataContent.size();
-    for(char c :packet){
-        sum+=(unsigned char)c;//ascII?
+    //sum计算修正
+    for(int i=2;i<packet.size();i++){
+        sum+= static_cast<unsigned char>(packet.at(i));
+        qDebug()<<"校验和3"<<sum;
     }
+    qDebug()<<"校验和"<<sum;
+    //sum = sum & 0xFF;
     packet.append(sum);
     packet.append(static_cast<char>(0xFF));
     return packet;
@@ -133,5 +166,29 @@ void MainWindow::writeLog(const QString &text,bool isSend){
     QString direction = isSend? "[TX]->":"[RX]<-";
     QString finalLog = timeStr + direction + text;
     ui->txtLog->appendPlainText(finalLog);
+}
+
+void MainWindow::initChart(){
+    // 1.添加图层
+    ui->plotTemp->addGraph();
+
+    // 2.设置画笔颜色
+    ui->plotTemp->graph(0)->setPen(QPen(Qt::blue));
+
+    // 3.设置坐标轴标签
+    ui->plotTemp->xAxis->setLabel("时间 (s)");
+    ui->plotTemp->yAxis->setLabel("温度 (℃)");
+
+    // 4.设置坐标轴范围 (比如温度 0~100)
+    ui->plotTemp->yAxis->setRange(0, 50);
+
+    // 5.允许用户拖拽和缩放
+    ui->plotTemp->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
+
+    QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);//?
+    dateTicker->setDateTimeFormat("HH:mm:ss");
+    ui->plotTemp->xAxis->setTicker(dateTicker);
+    ui->plotTemp->xAxis->setTickLabelRotation(30);
+
 }
 

@@ -18,9 +18,6 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
-
-
 public slots:
     // 接收子线程的反馈
     void onPortStatusChanged(bool isOpen);
@@ -39,5 +36,6 @@ private:
     void refreshPorts();
     QByteArray buildPacket(char funcCode, const QByteArray &dataContent);//封包
     void writeLog(const QString &text,bool isSend);//?
+    void initChart();
 };
 #endif // MAINWINDOW_H
