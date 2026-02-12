@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <QSerialPort>
-const int PROTOCOL_MAX_DATALEN = 64;
 
 class SerialWorker : public QObject
 {

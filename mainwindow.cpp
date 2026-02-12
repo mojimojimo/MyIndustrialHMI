@@ -79,6 +79,17 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
     //timer->start(1000);
+
+    //加载配置
+    QSettings settings("config.ini", QSettings::IniFormat);
+    QString lastPort = settings.value("PortName").toString();
+    int idx = ui->portList->findText(lastPort);
+    if(idx!= -1) ui->portList->setCurrentIndex(idx);
+
+    double lastTemp = settings.value("TargetTemp",0.0).toDouble();
+    ui->targetTemp->setValue(lastTemp);
+
+    restoreGeometry(settings.value("Geometry").toByteArray());
 }
 
 MainWindow::~MainWindow()
@@ -119,8 +130,8 @@ void MainWindow::onDataReceived(int type, double value){
     // 添加数据点
     ui->plotTemp->graph(0)->addData(key, value);
     // 移除太老的数据 (比如只保留最近 100 个点，防止内存爆掉)
-    //ui->plotTemp->graph(0)->data()->removeBefore(key - 100);
-    // 自动调整 X 轴范围，让它跟着时间走
+    ui->plotTemp->graph(0)->data()->removeBefore(key - 100);
+    // 实现自动滚动，最右侧边界key，跨度60s
     ui->plotTemp->xAxis->setRange(key, 60, Qt::AlignRight); // 显示最近60秒
     // 刷新重绘
     ui->plotTemp->replot();
@@ -192,3 +203,13 @@ void MainWindow::initChart(){
 
 }
 
+void MainWindow::closeEvent(QCloseEvent *event){
+
+    //配置存储：记住用户上次设置
+    QSettings settings("config.ini", QSettings::IniFormat);
+    settings.setValue("PortName", ui->portList->currentText());
+    settings.setValue("TargetTemp", ui->targetTemp->value());
+    settings.setValue("Geometry", saveGeometry());
+    event->accept(); // 允许窗口关闭
+
+}

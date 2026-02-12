@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QThread>
 #include "serialworker.h"
+#include <QSettings>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -34,8 +35,10 @@ private:
     QThread *thread = nullptr;
     QTimer * timer = nullptr;
     void refreshPorts();
+    void initChart();
     QByteArray buildPacket(char funcCode, const QByteArray &dataContent);//封包
     void writeLog(const QString &text,bool isSend);//?
-    void initChart();
+    void closeEvent(QCloseEvent *event);
+
 };
 #endif // MAINWINDOW_H
