@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QSerialPort>
+#include "ProtocolData.h"
 
 class SerialWorker : public QObject
 {
@@ -19,6 +20,7 @@ public slots://?
 
 private slots:
     void onReadyRead();
+    void handleError(QSerialPort::SerialPortError error);
 
 signals://?
     void portStatusChanged(bool isOpen);

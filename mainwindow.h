@@ -5,6 +5,7 @@
 #include <QThread>
 #include "serialworker.h"
 #include <QSettings>
+#include <QElapsedTimer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -33,7 +34,9 @@ signals:
 private:
     Ui::MainWindow *ui;
     QThread *thread = nullptr;
-    QTimer * timer = nullptr;
+    QTimer *timer = nullptr;
+    QTimer *timeoutTimer = nullptr;
+    QElapsedTimer responseTimer;
     void refreshPorts();
     void initChart();
     QByteArray buildPacket(char funcCode, const QByteArray &dataContent);//封包
