@@ -20,8 +20,8 @@ SerialWorker::~SerialWorker(){
 
 void SerialWorker::onReadyRead(){
     QByteArray data = serial->readAll();
-
-    emit rawDataReceived(data.toHex(' ').toUpper());
+//.toHex(' ').toUpper()
+    emit rawDataReceived(data);
 }
 
 void SerialWorker::openSerialPort(QString portName,int baudRate){

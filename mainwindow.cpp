@@ -42,9 +42,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     //分层日志
     //connect(worker,&SerialWorker::logSerial,this,&MainWindow::writeLog);
-    connect(worker,&SerialWorker::rawDataReceived,this,[=](QString rawdata){
+    connect(worker,&SerialWorker::rawDataReceived,this,[=](QByteArray rawdata){
         if (ui->chkHexDisplay->isChecked()) {    //原始日志 (Hex View)
-            QString hexLog = "原始数据: " + rawdata;
+            QString hexLog = "原始数据: " + rawdata.toHex(' ').toUpper();
             writeLog(hexLog, false);//接收；plainTextEdit默认用 UTF-8 显示文本
         }
     });
