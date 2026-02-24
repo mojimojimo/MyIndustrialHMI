@@ -3,8 +3,6 @@
 #include <QSerialPortInfo>
 #include <QMessageBox>
 #include <QLabel>
-#include <QTimer>
-#include <QDateTime>
 #include <QSharedPointer>
 #include "qcustomplot.h"
 #include <QDebug>
@@ -20,42 +18,52 @@ MainWindow::MainWindow(QWidget *parent)
     ui->targetTemp->setRange(-20.0,100.0);
     ui->btnSetTemp->setEnabled(false); // 默认不可点，直到连接成功
 
-    connect(ui->btnSetTemp,&QPushButton::clicked,[=](){
-        double val = ui->targetTemp->value();
-        short sendVal = static_cast<short>(val*10);//定点数传输
 
-        QByteArray data;
-        data.append(static_cast<char>(sendVal>>8));//?
-        data.append(static_cast<char>(sendVal & 0xFF));
-        QByteArray packet = buildPacket(FUNC_SET_PARAM,data);
-        emit signalSendData(packet);
-        writeLog("下发目标温度："+packet.toHex(' ').toUpper(),true);//C2137
-    });
     thread = new QThread;//内存泄漏
     SerialWorker *worker = new SerialWorker;
+    ProtocolParser *parser = new ProtocolParser;
+    DeviceManager *device = new DeviceManager(this);
     worker->moveToThread(thread);
+    parser->moveToThread(thread);
 
+    //开关串口
     connect(this,&MainWindow::signalOpenSerial,worker,&SerialWorker::openSerialPort);
     connect(this,&MainWindow::signalCloseSerial,worker,&SerialWorker::closeSerialPort);
-    connect(this,&MainWindow::signalSendData,worker,&SerialWorker::sendData);
 
-    connect(worker,&SerialWorker::portStatusChanged,this,&MainWindow::onPortStatusChanged);
-    connect(worker,&SerialWorker::dataReceived,this,&MainWindow::onDataReceived);
-    connect(worker,&SerialWorker::errorOccuerred,this,[=](QString errorMsg){//我靠要指定this?
-        QMessageBox::critical(this,"错误", errorMsg);
-    });
+    //发送数据
+    connect(this,&MainWindow::signalSendData,device,&DeviceManager::onSendData);
+    connect(device,&DeviceManager::sendFrame,parser,&ProtocolParser::buildPacket);
+    connect(parser,&ProtocolParser::sendRawData,worker,&SerialWorker::sendData);
+
+    //接收数据
+    connect(worker,&SerialWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
+    connect(parser,&ProtocolParser::frameReceived,device,&DeviceManager::onFrameReceived);
+    connect(device,&DeviceManager::dataReceived,this,&MainWindow::onDataReceived);
+
+    //分层日志
+    //connect(worker,&SerialWorker::logSerial,this,&MainWindow::writeLog);
     connect(worker,&SerialWorker::rawDataReceived,this,[=](QString rawdata){
         if (ui->chkHexDisplay->isChecked()) {    //原始日志 (Hex View)
             QString hexLog = "原始数据: " + rawdata;
-            writeLog(hexLog, false);//接收
+            writeLog(hexLog, false);//接收；plainTextEdit默认用 UTF-8 显示文本
         }
+    });
+    connect(parser,&ProtocolParser::logProtocol,this,&MainWindow::writeLog);
+    connect(device,&DeviceManager::logBusiness,this,&MainWindow::writeLog);
+
+    connect(this,&MainWindow::signalDeviceStart,device,&DeviceManager::startDevice);
+    connect(device,&DeviceManager::deviceOffline,worker,&SerialWorker::closeSerialPort);
+
+    connect(worker,&SerialWorker::portStatusChanged,this,&MainWindow::onPortStatusChanged);
+    connect(worker,&SerialWorker::errorOccuerred,this,[=](QString errorMsg){//指定this
+        QMessageBox::critical(this,"错误", errorMsg);
     });
 
 
-    // // 当线程结束运行时，自动删除 worker 对象
-    // connect(thread, &QThread::finished, worker, &SerialWorker::deleteLater);
-    // // 当线程结束运行时，自动删除 thread 对象自己
-    // connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    //线程结束后删除对象
+    connect(thread, &QThread::finished, worker, &SerialWorker::deleteLater);
+    connect(thread, &QThread::finished, parser, &ProtocolParser::deleteLater);
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
     //启动线程
     thread->start();
@@ -67,34 +75,16 @@ MainWindow::MainWindow(QWidget *parent)
         emit signalCloseSerial();
     });
 
-    timer = new QTimer(this);
-    timeoutTimer = new QTimer(this);
+    connect(ui->btnSetTemp,&QPushButton::clicked,[=](){
+        double val = ui->targetTemp->value();
+        short sendVal = static_cast<short>(val*10);//定点数传输
 
-    connect(timer,&QTimer::timeout,[=](){
-        if(ui->btnClose->isEnabled()){//？
-            //QByteArray queryCmd = QByteArray::fromHex("AA 55 03 00 03 FF");
-            QByteArray queryCmd;
-            QByteArray finalPacket = buildPacket(FUNC_READ_TEMP,queryCmd);//传的参是funccode+data
-            emit signalSendData(finalPacket);
-
-            // 发送日志
-            writeLog(finalPacket.toHex(' ').toUpper(), true); // true表示发送
-        }
-    });
-    //timer->start(1000);
-    connect(timeoutTimer,&QTimer::timeout,[=](){
-        if(!responseTimer.isValid()) return;
-        if(responseTimer.elapsed()>2000){
-            qDebug() << "检测到超时！准备断开...";
-            //顺序
-            timeoutTimer->stop();
-            timer->stop();
-            emit signalCloseSerial();
-            QString errorMsg ="设备已下线！（超时未响应）";
-            QMessageBox::critical(this,"错误", errorMsg);
-            //emit errorOccuerred(errorMsg);//只能发本类的信号
-            responseTimer.invalidate();
-        }
+        QByteArray data;
+        data.append(static_cast<char>(sendVal>>8));//?
+        data.append(static_cast<char>(sendVal & 0xFF));
+        emit signalSendData(FUNC_SET_PARAM,data);
+        QString cleanLog = QString("下发目标温度：%1 ℃").arg(val);//业务日志
+        writeLog(cleanLog,true);//C2137
     });
 
     //加载配置
@@ -111,11 +101,10 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    // 1. 告诉线程“你可以下班了”
-    // if (thread != nullptr && thread->isRunning()) {
-    //     thread->quit(); // 请求退出事件循环
-    //     thread->wait(); // 主线程在这里死等，直到子线程真正退出（防止主线程先死，子线程变成孤儿）
-    // }
+    if (thread != nullptr && thread->isRunning()) {
+        thread->quit(); // 请求退出事件循环
+        thread->wait(); // 主线程等待子线程真正退出
+    }
     delete ui;
 }
 
@@ -126,24 +115,20 @@ void MainWindow::onPortStatusChanged(bool isOpen){
         ui->btnOpen->setEnabled(false);
         ui->btnClose->setEnabled(true);
         ui->btnSetTemp->setEnabled(true);
-        timer->start(1000);
-        timeoutTimer->start(500);
-        // 【新增】连接刚建立时，重置一次计时器，给设备2秒的反应时间
-        responseTimer.start();
+        emit signalDeviceStart(true);
+
     }else{
         ui->lblStatus->setText("未连接");
         ui->lblStatus->setStyleSheet("color: red;");
         ui->btnOpen->setEnabled(true);
         ui->btnClose->setEnabled(false);
         ui->btnSetTemp->setEnabled(false);
-        timer->stop();
-        timeoutTimer->stop();
-        responseTimer.invalidate();
+        emit signalDeviceStart(false);
+
     }
 }
 
 void MainWindow::onDataReceived(int type, double value){
-    responseTimer.restart();
 
     if(type==1){
          ui->lblTemp->setText(QString::number(value,'f',1) + " ℃ ");
@@ -173,29 +158,7 @@ void MainWindow::refreshPorts(){
     }
 }
 
-QByteArray MainWindow::buildPacket(char funcCode, const QByteArray &dataContent){
-    QByteArray packet;
-    packet.append(static_cast<char>(FRAME_HEAD_1));//帧头
-    packet.append(static_cast<char>(FRAME_HEAD_2));
 
-    packet.append(funcCode);//功能码 int->Hex
-    packet.append(static_cast<char>(dataContent.size()));//数据长度 qsizetype怎么转16进制
-
-    packet.append(dataContent);
-
-    //计算校验和
-    unsigned char sum =0;
-    //sum计算修正
-    for(int i=2;i<packet.size();i++){
-        sum+= static_cast<unsigned char>(packet.at(i));
-        //qDebug()<<"校验和3"<<sum;
-    }
-    //qDebug()<<"校验和"<<sum;
-    //sum = sum & 0xFF;
-    packet.append(sum);
-    packet.append(static_cast<char>(FRAME_TAIL));
-    return packet;
-}
 
 void MainWindow::writeLog(const QString &text,bool isSend){
     //获取时间戳

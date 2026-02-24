@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <QSerialPort>
-#include "ProtocolData.h"
 
 class SerialWorker : public QObject
 {
@@ -13,25 +12,22 @@ public:
     ~SerialWorker();
 
 
-public slots://?
+public slots:
     void openSerialPort(QString portName,int baudRate);
     void closeSerialPort();
-    void sendData(QByteArray data);
+    void sendData(QByteArray data);//<-Parser
 
 private slots:
     void onReadyRead();
-    void handleError(QSerialPort::SerialPortError error);
+    void handleError(QSerialPort::SerialPortError error);//硬件检测
 
-signals://?
+signals:
     void portStatusChanged(bool isOpen);
-    void errorOccuerred(QString errorMsg);
-    void dataReceived(int type,double value);
-    void rawDataReceived(QString rawdata);//
+    void errorOccuerred(QString errorMsg);//->UI
+    void rawDataReceived(QByteArray rawdata);//->Parser
 
 private:
     QSerialPort *serial;//串口对象
-    QByteArray m_buffer;//全局接收缓冲区
-    void processData();
 };
 
 #endif // SERIALWORKER_H

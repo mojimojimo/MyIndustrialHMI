@@ -13,4 +13,9 @@ const char FRAME_TAIL = static_cast<char> (0xFF);
 
 const int PROTOCOL_MAX_DATALEN = 64;
 
+struct Frame{
+    quint8 funcCode;//
+    QByteArray payload;
+};
+
 #endif // PROTOCOLDATA_H

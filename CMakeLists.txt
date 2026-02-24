@@ -26,6 +26,8 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         serialworker.h serialworker.cpp
         qcustomplot.cpp qcustomplot.h
         ProtocolData.h
+        protocolparser.h protocolparser.cpp
+        devicemanager.h devicemanager.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET MyIndustrialHMI APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

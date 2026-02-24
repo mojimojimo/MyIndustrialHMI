@@ -4,8 +4,9 @@
 #include <QMainWindow>
 #include <QThread>
 #include "serialworker.h"
+#include "protocolparser.h"
+#include "devicemanager.h"
 #include <QSettings>
-#include <QElapsedTimer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -23,24 +24,21 @@ public:
 public slots:
     // 接收子线程的反馈
     void onPortStatusChanged(bool isOpen);
-    void onDataReceived(int type, double value);
+    void onDataReceived(int type, double value);//<-Device
+    void writeLog(const QString &text,bool isSend);
 
 signals:
-    void signalOpenSerial(QString portName,int baudRate);
-    void signalCloseSerial();
-    void signalSendData(QByteArray data);
-
+    void signalOpenSerial(QString portName,int baudRate);//->Serial
+    void signalCloseSerial();//->Serial
+    void signalSendData(char funcCode, const QByteArray &dataContent);//->Device
+    void signalDeviceStart(bool toStart);
 
 private:
     Ui::MainWindow *ui;
     QThread *thread = nullptr;
-    QTimer *timer = nullptr;
-    QTimer *timeoutTimer = nullptr;
-    QElapsedTimer responseTimer;
+
     void refreshPorts();
     void initChart();
-    QByteArray buildPacket(char funcCode, const QByteArray &dataContent);//封包
-    void writeLog(const QString &text,bool isSend);//?
     void closeEvent(QCloseEvent *event);
 
 };
