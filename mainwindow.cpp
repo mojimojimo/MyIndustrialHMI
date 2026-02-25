@@ -124,8 +124,8 @@ void MainWindow::onPortStatusChanged(bool isOpen){
         ui->btnClose->setEnabled(false);
         ui->btnSetTemp->setEnabled(false);
         emit signalDeviceStart(false);
-
     }
+
 }
 
 void MainWindow::onDataReceived(int type, double value){

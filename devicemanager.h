@@ -6,6 +6,14 @@
 #include <QTimer>
 #include <QElapsedTimer>
 
+enum class DeviceState{
+    Disconnected,
+    Connecting,
+    Connected,
+    Reconnecting,
+    Error
+};
+
 class DeviceManager : public QObject
 {
     Q_OBJECT
@@ -27,6 +35,10 @@ private:
     QTimer *timer = nullptr;
     QTimer *timeoutTimer = nullptr;
     QElapsedTimer responseTimer;
+    DeviceState state = DeviceState::Disconnected;
+    int retryCount = 0;
+
+    void setState(DeviceState newState);
 };
 
 #endif // DEVICEMANAGER_H

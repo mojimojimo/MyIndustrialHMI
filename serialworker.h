@@ -15,7 +15,7 @@ public:
 public slots:
     void openSerialPort(QString portName,int baudRate);
     void closeSerialPort();
-    void sendData(QByteArray data);//<-Parser
+    void sendData(const QByteArray &data);//<-Parser
 
 private slots:
     void onReadyRead();
@@ -24,7 +24,7 @@ private slots:
 signals:
     void portStatusChanged(bool isOpen);
     void errorOccuerred(QString errorMsg);//->UI
-    void rawDataReceived(QByteArray rawdata);//->Parser
+    void rawDataReceived(const QByteArray &rawdata);//->Parser
 
 private:
     QSerialPort *serial;//串口对象

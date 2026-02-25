@@ -53,7 +53,7 @@ void SerialWorker::closeSerialPort(){
     emit portStatusChanged(false);
 }
 
-void SerialWorker::sendData(QByteArray data){
+void SerialWorker::sendData(const QByteArray &data){
     //发数据 qint64
     //QByteArray sendData = QByteArray::fromHex("AA55020119FF");//AA 55 02 01 19 3F
     if (serial && serial->isOpen()) {

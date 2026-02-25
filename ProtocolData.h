@@ -17,5 +17,6 @@ struct Frame{
     quint8 funcCode;//
     QByteArray payload;
 };
+//Q_DECLARE_METATYPE(Frame) 注册元类型
 
 #endif // PROTOCOLDATA_H
