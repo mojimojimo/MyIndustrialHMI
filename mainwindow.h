@@ -5,6 +5,7 @@
 #include <QThread>
 #include "serialworker.h"
 #include "protocolparser.h"
+#include "tcpworker.h"
 #include "devicemanager.h"
 #include <QSettings>
 
@@ -23,13 +24,13 @@ public:
     ~MainWindow();
 public slots:
     // 接收子线程的反馈
-    void onPortStatusChanged(bool isOpen);
+    void onStatusChanged(bool isOpen);
     void onDataReceived(int type, double value);//<-Device
     void writeLog(const QString &text,bool isSend);
 
 signals:
-    void signalOpenSerial(QString portName,int baudRate);//->Serial
-    void signalCloseSerial();//->Serial
+    void signalOpen(QString portName,int baudRate);//->Serial
+    void signalClose();//->Serial
     void signalSendData(char funcCode, const QByteArray &dataContent);//->Device
     void signalDeviceStart(bool toStart);
 

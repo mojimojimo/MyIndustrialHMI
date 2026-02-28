@@ -20,29 +20,29 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     thread = new QThread;//内存泄漏
-    SerialWorker *worker = new SerialWorker;
+    CommWorker *worker = new TcpWorker;
     ProtocolParser *parser = new ProtocolParser;
     DeviceManager *device = new DeviceManager(this);
     worker->moveToThread(thread);
     parser->moveToThread(thread);
 
     //开关串口
-    connect(this,&MainWindow::signalOpenSerial,worker,&SerialWorker::openSerialPort);
-    connect(this,&MainWindow::signalCloseSerial,worker,&SerialWorker::closeSerialPort);
+    connect(this,&MainWindow::signalOpen,worker,&CommWorker::open);
+    connect(this,&MainWindow::signalClose,worker,&CommWorker::close);
 
     //发送数据
     connect(this,&MainWindow::signalSendData,device,&DeviceManager::onSendData);
     connect(device,&DeviceManager::sendFrame,parser,&ProtocolParser::buildPacket);
-    connect(parser,&ProtocolParser::sendRawData,worker,&SerialWorker::sendData);
+    connect(parser,&ProtocolParser::sendRawData,worker,&CommWorker::sendData);
 
     //接收数据
-    connect(worker,&SerialWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
+    connect(worker,&CommWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
     connect(parser,&ProtocolParser::frameReceived,device,&DeviceManager::onFrameReceived);
     connect(device,&DeviceManager::dataReceived,this,&MainWindow::onDataReceived);
 
     //分层日志
     //connect(worker,&SerialWorker::logSerial,this,&MainWindow::writeLog);
-    connect(worker,&SerialWorker::rawDataReceived,this,[=](QByteArray rawdata){
+    connect(worker,&CommWorker::rawDataReceived,this,[=](QByteArray rawdata){
         if (ui->chkHexDisplay->isChecked()) {    //原始日志 (Hex View)
             QString hexLog = "原始数据: " + rawdata.toHex(' ').toUpper();
             writeLog(hexLog, false);//接收；plainTextEdit默认用 UTF-8 显示文本
@@ -52,27 +52,28 @@ MainWindow::MainWindow(QWidget *parent)
     connect(device,&DeviceManager::logBusiness,this,&MainWindow::writeLog);
 
     connect(this,&MainWindow::signalDeviceStart,device,&DeviceManager::startDevice);
-    connect(device,&DeviceManager::deviceOffline,worker,&SerialWorker::closeSerialPort);
+    connect(device,&DeviceManager::deviceOffline,worker,&CommWorker::close);
 
-    connect(worker,&SerialWorker::portStatusChanged,this,&MainWindow::onPortStatusChanged);
-    connect(worker,&SerialWorker::errorOccuerred,this,[=](QString errorMsg){//指定this
+    connect(worker,&CommWorker::StatusChanged,this,&MainWindow::onStatusChanged);
+    connect(worker,&CommWorker::errorOccurred,this,[=](QString errorMsg){//指定this
         QMessageBox::critical(this,"错误", errorMsg);
     });
 
 
     //线程结束后删除对象
-    connect(thread, &QThread::finished, worker, &SerialWorker::deleteLater);
+    connect(thread, &QThread::finished, worker, &CommWorker::deleteLater);
     connect(thread, &QThread::finished, parser, &ProtocolParser::deleteLater);
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
     //启动线程
     thread->start();
     connect(ui->btnOpen,&QPushButton::clicked,[=](){
-        QString port = ui->portList->currentData().toString();//?
-        emit signalOpenSerial(port,9600);
+        //QString port = ui->portList->currentData().toString();//?
+        //emit signalOpen(port,9600);
+        emit signalOpen("127.0.0.1",8080);
     });
     connect(ui->btnClose,&QPushButton::clicked,[=](){
-        emit signalCloseSerial();
+        emit signalClose();
     });
 
     connect(ui->btnSetTemp,&QPushButton::clicked,[=](){
@@ -108,7 +109,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::onPortStatusChanged(bool isOpen){
+void MainWindow::onStatusChanged(bool isOpen){
     if(isOpen){
         ui->lblStatus->setText("已连接");
         ui->lblStatus->setStyleSheet("color: green;");

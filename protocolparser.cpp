@@ -84,7 +84,7 @@ void ProtocolParser::processData(){
     }
 }
 
-void ProtocolParser::buildPacket(Frame frame){
+void ProtocolParser::buildPacket(Frame frame){//应用层封包
 
     QByteArray packet;
     packet.append(static_cast<char>(FRAME_HEAD_1));//帧头

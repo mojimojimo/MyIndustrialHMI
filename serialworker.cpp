@@ -1,8 +1,8 @@
 #include "serialworker.h"
 #include<QDebug>
 
-SerialWorker::SerialWorker(QObject *parent)
-    : QObject{parent}
+SerialWorker::SerialWorker(CommWorker *parent)
+    : CommWorker{parent}//
 {
     serial = new QSerialPort(this);
 
@@ -24,13 +24,13 @@ void SerialWorker::onReadyRead(){
     emit rawDataReceived(data);
 }
 
-void SerialWorker::openSerialPort(QString portName,int baudRate){
+void SerialWorker::open(QString target, int portOrBaud){
 
     if (serial->isOpen()) serial->close();
 
     //配置串口参数
-    serial->setPortName(portName);
-    serial->setBaudRate(baudRate);
+    serial->setPortName(target);
+    serial->setBaudRate(portOrBaud);
     //8N1
     // serial->setDataBits(QSerialPort::Data8);
     // serial->setParity(QSerialPort::NoParity);
@@ -39,18 +39,18 @@ void SerialWorker::openSerialPort(QString portName,int baudRate){
     //打开串口
     if(serial->open(QIODevice::ReadWrite)){
         qDebug() << "串口打开成功：COM1";
-        emit portStatusChanged(true);
+        emit StatusChanged(true);
     } else {
-        emit errorOccuerred(serial->errorString());
-        emit portStatusChanged(false);
+        emit errorOccurred(serial->errorString());
+        emit StatusChanged(false);
         qDebug() << "串口打开失败："<<serial->errorString();
 
     }
 }
 
-void SerialWorker::closeSerialPort(){
+void SerialWorker::close(){
     serial->close();
-    emit portStatusChanged(false);
+    emit StatusChanged(false);
 }
 
 void SerialWorker::sendData(const QByteArray &data){
@@ -63,6 +63,7 @@ void SerialWorker::sendData(const QByteArray &data){
 
 
 void SerialWorker::handleError(QSerialPort::SerialPortError error){
+    //qDebug()<<"handleError被执行了！";
     //虚拟串口无 “硬件检测”
     if(error == QSerialPort::NoError) return;//没错误
     QString errorStr;
@@ -77,7 +78,7 @@ void SerialWorker::handleError(QSerialPort::SerialPortError error){
         errorStr = "权限不足（设备被占用）！";
         needClose = true;
         break;
-    case QSerialPort::DeviceNotFoundError:
+    case QSerialPort::DeviceNotFoundError://在注释掉串口逻辑时候触发了！
         errorStr = "找不到指定设备！";
         needClose = true;
         break;
@@ -89,7 +90,7 @@ void SerialWorker::handleError(QSerialPort::SerialPortError error){
         if(serial->isOpen()){
             serial->close();
         }
-        emit portStatusChanged(false);
-        emit errorOccuerred(errorStr);
+        emit StatusChanged(false);
+        emit errorOccurred(errorStr);
     }
 }
