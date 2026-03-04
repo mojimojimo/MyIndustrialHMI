@@ -111,11 +111,6 @@ void ProtocolParser::buildPacket(Frame frame){//应用层封包
 }
 
 void ProtocolParser::onRawDataReceived(const QByteArray &rawdata){
-    //QString logdata = rawdata.toHex(' ').toUpper();
-    //if (ui->chkHexDisplay->isChecked()) {    //原始日志 (Hex View)
-    //QString hexLog = "原始数据: " + logdata;
-    //emit logProtocol(hexLog, false);//接收
-    //}
     m_buffer.append(rawdata);
     processData();
 }

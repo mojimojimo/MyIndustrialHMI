@@ -3,6 +3,9 @@
 
 #include <QObject>
 #include "ProtocolData.h"
+#include <QThread>
+#include "protocolparser.h"
+#include "commworker.h"
 #include <QTimer>
 #include <QElapsedTimer>
 
@@ -19,17 +22,22 @@ class DeviceManager : public QObject
     Q_OBJECT
 public:
     explicit DeviceManager(QObject *parent = nullptr);
+    ~DeviceManager();
 
 public slots:
     void onFrameReceived(Frame frame);//<-Parser
-    void onSendData(char funcCode, const QByteArray &dataContent);
-    void startDevice(bool toStart);//<-UI
+    void onSendData(char funcCode, const QByteArray &dataContent);//<-UI
+    void requestOpen(int type,QString portName,int baudRate);//<-UI
+    void requestClose();//<-UI
 
 signals:
+    void signalOpen(QString target,int portOrBaud);//->worker
+    void signalClose();//->worker
     void sendFrame(Frame frame);//->Parser
     void dataReceived(int type,double value);//->UI
-    void deviceOffline();
-    void logBusiness(const QString &text, bool isSend);
+    void logBusiness(const QString &text, bool isSend);//->UI
+    void statusChanged(bool isOpen);//->UI
+    void errorOccurred(QString errorMsg);
 
 private:
     QTimer *timer = nullptr;
@@ -38,7 +46,14 @@ private:
     DeviceState state = DeviceState::Disconnected;
     int retryCount = 0;
 
+    QThread *thread = nullptr;
+    CommWorker *worker = nullptr;
+    ProtocolParser *parser = nullptr;
+
     void setState(DeviceState newState);
+    void setupPipeline(int type);
+    void teardownPipeline();
+
 };
 
 #endif // DEVICEMANAGER_H

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>919</width>
-    <height>594</height>
+    <width>860</width>
+    <height>832</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,10 +17,10 @@
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>500</x>
-      <y>20</y>
-      <width>341</width>
-      <height>171</height>
+      <x>20</x>
+      <y>290</y>
+      <width>391</width>
+      <height>241</height>
      </rect>
     </property>
     <property name="title">
@@ -39,7 +39,7 @@
       <string>下发设置</string>
      </property>
     </widget>
-    <widget class="QWidget" name="">
+    <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
        <x>50</x>
@@ -65,76 +65,192 @@
    <widget class="QGroupBox" name="groupBox_2">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>10</y>
+      <x>20</x>
+      <y>20</y>
       <width>391</width>
-      <height>171</height>
+      <height>271</height>
      </rect>
     </property>
     <property name="title">
      <string>通信设置</string>
     </property>
-    <widget class="QWidget" name="">
+    <widget class="QStackedWidget" name="stackedWidget">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>30</y>
-       <width>231</width>
-       <height>91</height>
+       <y>90</y>
+       <width>261</width>
+       <height>101</height>
       </rect>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="page">
+      <widget class="QLabel" name="label_5">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>20</y>
+         <width>60</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>串口选择：</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_3">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>60</y>
+         <width>48</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>波特率：</string>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="portList">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>20</y>
+         <width>111</width>
+         <height>21</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="baudList">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>60</y>
+         <width>111</width>
+         <height>21</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QWidget" name="page_2">
+      <widget class="QWidget" name="layoutWidget">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>20</y>
+         <width>187</width>
+         <height>70</height>
+        </rect>
+       </property>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>端口号：</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="ipEdit"/>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="portEdit"/>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>IP:</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </widget>
+    <widget class="QComboBox" name="modeList">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>30</y>
+       <width>111</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnOpen">
+     <property name="geometry">
+      <rect>
+       <x>50</x>
+       <y>210</y>
+       <width>111</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>连接</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnClose">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>210</y>
+       <width>101</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>断开连接</string>
+     </property>
+    </widget>
+    <widget class="QWidget" name="layoutWidget">
+     <property name="geometry">
+      <rect>
+       <x>190</x>
+       <y>30</y>
+       <width>81</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QComboBox" name="portList"/>
+       <widget class="QLabel" name="lblLight">
+        <property name="styleSheet">
+         <string notr="true">min-width: 16px;
+min-height: 16px;
+max-width: 16px;
+max-height: 16px;
+border-radius: 8px;  /* 半径是宽高的一半，就是圆形 */
+background-color: grey; /* 默认灰色 */
+border: 1px solid #666;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QLabel" name="lblStatus">
         <property name="frameShape">
-         <enum>QFrame::Panel</enum>
+         <enum>QFrame::NoFrame</enum>
         </property>
         <property name="text">
          <string>未连接</string>
         </property>
        </widget>
       </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <item>
-         <widget class="QPushButton" name="btnOpen">
-          <property name="text">
-           <string>打开串口</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btnClose">
-          <property name="text">
-           <string>关闭串口</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
      </layout>
-    </widget>
-    <widget class="QComboBox" name="baudRateList">
-     <property name="geometry">
-      <rect>
-       <x>280</x>
-       <y>30</y>
-       <width>67</width>
-       <height>22</height>
-      </rect>
-     </property>
     </widget>
    </widget>
    <widget class="QGroupBox" name="groupBox_3">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>290</y>
-      <width>461</width>
-      <height>251</height>
+      <x>20</x>
+      <y>550</y>
+      <width>821</width>
+      <height>261</height>
      </rect>
     </property>
     <property name="title">
@@ -143,7 +259,7 @@
     <widget class="QCheckBox" name="chkHexDisplay">
      <property name="geometry">
       <rect>
-       <x>340</x>
+       <x>720</x>
        <y>10</y>
        <width>91</width>
        <height>20</height>
@@ -158,7 +274,7 @@
       <rect>
        <x>10</x>
        <y>40</y>
-       <width>421</width>
+       <width>791</width>
        <height>191</height>
       </rect>
      </property>
@@ -167,10 +283,10 @@
    <widget class="QGroupBox" name="groupBox_4">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>190</y>
-      <width>381</width>
-      <height>80</height>
+      <x>420</x>
+      <y>20</y>
+      <width>421</width>
+      <height>211</height>
      </rect>
     </property>
     <property name="title">
@@ -179,7 +295,7 @@
     <widget class="QLabel" name="lblTemp">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>50</x>
        <y>30</y>
        <width>301</width>
        <height>31</height>
@@ -195,14 +311,35 @@
       <string/>
      </property>
     </widget>
+    <widget class="QLCDNumber" name="lcdTemp">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>90</y>
+       <width>191</width>
+       <height>81</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLCDNumber {
+    background-color: #1e1e1e; /* 黑底 */
+    color: #00ff00;            /* 绿字 */
+    border: 2px solid #555;    /* 边框 */
+    border-radius: 5px;        /* 圆角 */
+}</string>
+     </property>
+     <property name="segmentStyle">
+      <enum>QLCDNumber::Flat</enum>
+     </property>
+    </widget>
    </widget>
    <widget class="QGroupBox" name="groupBox_5">
     <property name="geometry">
      <rect>
-      <x>500</x>
-      <y>290</y>
-      <width>401</width>
-      <height>251</height>
+      <x>420</x>
+      <y>240</y>
+      <width>421</width>
+      <height>311</height>
      </rect>
     </property>
     <property name="title">
@@ -213,7 +350,7 @@
       <rect>
        <x>20</x>
        <y>40</y>
-       <width>351</width>
+       <width>381</width>
        <height>191</height>
       </rect>
      </property>
@@ -225,7 +362,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>919</width>
+     <width>860</width>
      <height>22</height>
     </rect>
    </property>

@@ -2,10 +2,6 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QThread>
-#include "serialworker.h"
-#include "protocolparser.h"
-#include "tcpworker.h"
 #include "devicemanager.h"
 #include <QSettings>
 
@@ -29,14 +25,10 @@ public slots:
     void writeLog(const QString &text,bool isSend);
 
 signals:
-    void signalOpen(QString portName,int baudRate);//->Serial
-    void signalClose();//->Serial
     void signalSendData(char funcCode, const QByteArray &dataContent);//->Device
-    void signalDeviceStart(bool toStart);
 
 private:
     Ui::MainWindow *ui;
-    QThread *thread = nullptr;
 
     void refreshPorts();
     void initChart();

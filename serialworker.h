@@ -21,11 +21,6 @@ private slots:
     void onReadyRead();
     void handleError(QSerialPort::SerialPortError error);//硬件检测
 
-// signals:
-//     void StatusChanged(bool isOpen);//->UI
-//     void errorOccuerred(QString errorMsg);//->UI
-//     void rawDataReceived(const QByteArray &rawdata);//->Parser
-
 private:
     QSerialPort *serial;//串口对象
 };

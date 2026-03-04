@@ -6,6 +6,7 @@
 #include <QSharedPointer>
 #include "qcustomplot.h"
 #include <QDebug>
+#include <QComboBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -18,68 +19,56 @@ MainWindow::MainWindow(QWidget *parent)
     ui->targetTemp->setRange(-20.0,100.0);
     ui->btnSetTemp->setEnabled(false); // 默认不可点，直到连接成功
 
+    ui->lcdTemp->setMode(QLCDNumber::Dec);
 
-    thread = new QThread;//内存泄漏
-    CommWorker *worker = new TcpWorker;
-    ProtocolParser *parser = new ProtocolParser;
+    connect(ui->modeList,&QComboBox::currentTextChanged,[=](QString text){
+        if(text == "串口通信"){
+            ui->stackedWidget->setCurrentIndex(0);
+        }else{
+            ui->stackedWidget->setCurrentIndex(1);
+        }
+    });
+
+
     DeviceManager *device = new DeviceManager(this);
-    worker->moveToThread(thread);
-    parser->moveToThread(thread);
-
-    //开关串口
-    connect(this,&MainWindow::signalOpen,worker,&CommWorker::open);
-    connect(this,&MainWindow::signalClose,worker,&CommWorker::close);
 
     //发送数据
     connect(this,&MainWindow::signalSendData,device,&DeviceManager::onSendData);
-    connect(device,&DeviceManager::sendFrame,parser,&ProtocolParser::buildPacket);
-    connect(parser,&ProtocolParser::sendRawData,worker,&CommWorker::sendData);
-
     //接收数据
-    connect(worker,&CommWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
-    connect(parser,&ProtocolParser::frameReceived,device,&DeviceManager::onFrameReceived);
     connect(device,&DeviceManager::dataReceived,this,&MainWindow::onDataReceived);
 
+    connect(device,&DeviceManager::statusChanged,this,&MainWindow::onStatusChanged);
+
     //分层日志
-    //connect(worker,&SerialWorker::logSerial,this,&MainWindow::writeLog);
-    connect(worker,&CommWorker::rawDataReceived,this,[=](QByteArray rawdata){
-        if (ui->chkHexDisplay->isChecked()) {    //原始日志 (Hex View)
-            QString hexLog = "原始数据: " + rawdata.toHex(' ').toUpper();
-            writeLog(hexLog, false);//接收；plainTextEdit默认用 UTF-8 显示文本
-        }
-    });
-    connect(parser,&ProtocolParser::logProtocol,this,&MainWindow::writeLog);
     connect(device,&DeviceManager::logBusiness,this,&MainWindow::writeLog);
 
-    connect(this,&MainWindow::signalDeviceStart,device,&DeviceManager::startDevice);
-    connect(device,&DeviceManager::deviceOffline,worker,&CommWorker::close);
-
-    connect(worker,&CommWorker::StatusChanged,this,&MainWindow::onStatusChanged);
-    connect(worker,&CommWorker::errorOccurred,this,[=](QString errorMsg){//指定this
+    connect(device,&DeviceManager::errorOccurred,this,[=](QString errorMsg){//指定this
         QMessageBox::critical(this,"错误", errorMsg);
     });
 
 
-    //线程结束后删除对象
-    connect(thread, &QThread::finished, worker, &CommWorker::deleteLater);
-    connect(thread, &QThread::finished, parser, &ProtocolParser::deleteLater);
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-
-    //启动线程
-    thread->start();
     connect(ui->btnOpen,&QPushButton::clicked,[=](){
-        //QString port = ui->portList->currentData().toString();//?
-        //emit signalOpen(port,9600);
-        emit signalOpen("127.0.0.1",8080);
+        int mode = ui->modeList->currentIndex();//
+        QString target;
+        int portOrBaud;
+        if(mode){//mode和mode==0
+            target = ui->ipEdit->text();//mode==1:TCP
+            portOrBaud = ui->portEdit->text().toInt();
+        }else{
+            target = ui->portList->currentData().toString();
+            portOrBaud = ui->baudList->currentText().toInt();
+        }
+        //qDebug()<<target<<mode<<portOrBaud;
+        device->requestOpen(mode,target,portOrBaud);
     });
+
     connect(ui->btnClose,&QPushButton::clicked,[=](){
-        emit signalClose();
+        device->requestClose();
     });
 
     connect(ui->btnSetTemp,&QPushButton::clicked,[=](){
         double val = ui->targetTemp->value();
         short sendVal = static_cast<short>(val*10);//定点数传输
-
         QByteArray data;
         data.append(static_cast<char>(sendVal>>8));//?
         data.append(static_cast<char>(sendVal & 0xFF));
@@ -91,8 +80,16 @@ MainWindow::MainWindow(QWidget *parent)
     //加载配置
     QSettings settings("config.ini", QSettings::IniFormat);
     QString lastPort = settings.value("PortName").toString();
-    int idx = ui->portList->findText(lastPort);
-    if(idx!= -1) ui->portList->setCurrentIndex(idx);
+    QString lastBaud = settings.value("Baud").toString();
+    QString lastIp = settings.value("IP").toString();
+    QString port = settings.value("Port").toString();
+
+    int idx1 = ui->portList->findText(lastPort);
+    if(idx1!= -1) ui->portList->setCurrentIndex(idx1);
+    int idx2 = ui->baudList->findText(lastBaud);
+    if(idx2!= -1) ui->baudList->setCurrentIndex(idx2);
+    ui->ipEdit->setText(lastIp);
+    ui->portEdit->setText(port);
 
     double lastTemp = settings.value("TargetTemp",0.0).toDouble();
     ui->targetTemp->setValue(lastTemp);
@@ -102,10 +99,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    if (thread != nullptr && thread->isRunning()) {
-        thread->quit(); // 请求退出事件循环
-        thread->wait(); // 主线程等待子线程真正退出
-    }
     delete ui;
 }
 
@@ -113,18 +106,37 @@ void MainWindow::onStatusChanged(bool isOpen){
     if(isOpen){
         ui->lblStatus->setText("已连接");
         ui->lblStatus->setStyleSheet("color: green;");
+        ui->lblLight->setStyleSheet(R"(QLabel {
+            min-width: 16px;
+            min-height: 16px;
+            max-width: 16px;
+            max-height: 16px;
+            background-color: green;
+            border-radius: 8px;
+            border: 1px solid #666;
+        })");
+
         ui->btnOpen->setEnabled(false);
         ui->btnClose->setEnabled(true);
         ui->btnSetTemp->setEnabled(true);
-        emit signalDeviceStart(true);
+        //emit signalDeviceStart(true);
 
     }else{
         ui->lblStatus->setText("未连接");
         ui->lblStatus->setStyleSheet("color: red;");
+        ui->lblLight->setStyleSheet(R"(QLabel {
+            min-width: 16px;
+            min-height: 16px;
+            max-width: 16px;
+            max-height: 16px;
+            background-color: red;
+            border-radius: 8px;
+            border: 1px solid #666;
+        })");
         ui->btnOpen->setEnabled(true);
         ui->btnClose->setEnabled(false);
         ui->btnSetTemp->setEnabled(false);
-        emit signalDeviceStart(false);
+        //emit signalDeviceStart(false);
     }
 
 }
@@ -133,6 +145,7 @@ void MainWindow::onDataReceived(int type, double value){
 
     if(type==1){
          ui->lblTemp->setText(QString::number(value,'f',1) + " ℃ ");
+         ui->lcdTemp->display(QString::number(value,'f',1));
          QString cleanLog = QString("解析成功：温度 = %1 ℃").arg(value);//业务日志 (Text View)
          writeLog(cleanLog, false);
 
@@ -157,6 +170,15 @@ void MainWindow::refreshPorts(){
         QString port = info.portName()+"("+info.description()+")";
         ui->portList->addItem(port,info.portName());//？
     }
+
+    ui->baudList->clear();
+
+    ui->modeList->addItem("串口通信");
+    ui->modeList->addItem("TCP客户端");
+    QStringList items;
+    items << "9600" << "14400" << "19200" <<"115200";
+    ui->baudList->addItems(items);
+
 }
 
 
@@ -199,6 +221,10 @@ void MainWindow::closeEvent(QCloseEvent *event){
     //配置存储：记住用户上次设置
     QSettings settings("config.ini", QSettings::IniFormat);
     settings.setValue("PortName", ui->portList->currentText());
+    settings.setValue("Baud",ui->baudList->currentText());
+    settings.setValue("IP", ui->ipEdit->text());
+    settings.setValue("Port",ui->portEdit->text());
+
     settings.setValue("TargetTemp", ui->targetTemp->value());
     settings.setValue("Geometry", saveGeometry());
     event->accept(); // 允许窗口关闭

@@ -25,7 +25,6 @@ void SerialWorker::onReadyRead(){
 }
 
 void SerialWorker::open(QString target, int portOrBaud){
-
     if (serial->isOpen()) serial->close();
 
     //配置串口参数
@@ -49,6 +48,7 @@ void SerialWorker::open(QString target, int portOrBaud){
 }
 
 void SerialWorker::close(){
+
     serial->close();
     emit StatusChanged(false);
 }

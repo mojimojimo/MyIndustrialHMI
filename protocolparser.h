@@ -2,7 +2,6 @@
 #define PROTOCOLPARSER_H
 
 #include <QObject>
-#include "serialworker.h"
 #include "ProtocolData.h"
 
 class ProtocolParser : public QObject
