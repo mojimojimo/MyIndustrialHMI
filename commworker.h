@@ -20,8 +20,6 @@ signals:
     void errorOccurred(QString errorMsg);//->UI
     void rawDataReceived(const QByteArray &rawdata);//->Parser
 
-//private:
-    //QSerialPort *serial;//串口对象
 };
 
 #endif // COMMWORKER_H

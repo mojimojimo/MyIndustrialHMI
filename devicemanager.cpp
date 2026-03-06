@@ -1,6 +1,7 @@
 #include "devicemanager.h"
 #include "serialworker.h"
 #include "tcpworker.h"
+#include "databasemanager.h"
 #include <QDebug>
 #include <QDateTime>
 
@@ -55,6 +56,7 @@ void DeviceManager::onFrameReceived(Frame frame){
             unsigned char lowByte = static_cast<unsigned char>( frame.payload.at(1));//?-3°C?
             short temp = (highByte<<8) | lowByte;//int16_t
             double realTemp = temp / 10.0;
+            DatabaseManager::instance().insertData(realTemp);
             emit dataReceived(1,realTemp);
             qDebug()<<"温度:"<<realTemp<<" ℃ ";
         }
