@@ -349,10 +349,23 @@ border: 1px solid #666;</string>
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>40</y>
+       <y>70</y>
        <width>381</width>
-       <height>191</height>
+       <height>231</height>
       </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnHistory">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>20</y>
+       <width>91</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>历史温度查询</string>
      </property>
     </widget>
    </widget>

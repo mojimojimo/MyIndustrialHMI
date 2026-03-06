@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "historydialog.h"
 #include <QSerialPortInfo>
 #include <QMessageBox>
 #include <QLabel>
@@ -75,6 +76,11 @@ MainWindow::MainWindow(QWidget *parent)
         emit signalSendData(FUNC_SET_PARAM,data);
         QString cleanLog = QString("下发目标温度：%1 ℃").arg(val);//业务日志
         writeLog(cleanLog,true);//C2137
+    });
+
+    connect(ui->btnHistory,&QPushButton::clicked,[=](){
+        HistoryDialog dlg(this);
+        dlg.exec(); // 模态显示
     });
 
     //加载配置

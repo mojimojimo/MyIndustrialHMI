@@ -31,6 +31,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         commworker.h commworker.cpp
         tcpworker.h tcpworker.cpp
         databasemanager.h databasemanager.cpp
+        historydialog.h historydialog.cpp historydialog.ui
 
     )
 # Define target properties for Android with Qt 6 as:

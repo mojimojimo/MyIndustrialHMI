@@ -44,3 +44,26 @@ void DatabaseManager::insertData(double value){
         qDebug()<<"Insert error:"<<query.lastError();
     }
 }
+
+QList<HistoryData> DatabaseManager::queryHistory(const QDateTime &start,const QDateTime& end){
+    QList<HistoryData> list;
+    QSqlQuery query;//"  "
+    query.prepare("select timestamp,value from temperature_records "
+                  "where timestamp between ? and ? order by timestamp asc");
+    query.addBindValue(start);
+    query.addBindValue(end);
+
+    if(query.exec()){
+        while(query.next()){
+            HistoryData data;
+            QDateTime dt = query.value(0).toDateTime();
+            data.timestamp = dt.toMSecsSinceEpoch();
+            data.value = query.value(1).toDouble();
+            list.append(data);
+        }
+
+    }else{
+        qDebug()<<"Query history error:"<<query.lastError();
+    }
+    return list;
+}
