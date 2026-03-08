@@ -41,7 +41,7 @@ DeviceManager::~DeviceManager(){
     teardownPipeline();
 }
 
-void DeviceManager::onFrameReceived(Frame frame){
+void DeviceManager::onFrameReceived(const Frame &frame){
     responseTimer.restart();
 
     if(state == DeviceState::Reconnecting){

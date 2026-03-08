@@ -14,7 +14,7 @@ void ProtocolParser::processData(){
     while(m_buffer.size() - readIndex>=6){//当前协议最小包长度为6(无payload)
 
         //1.帧头校验：移除脏数据
-        if(m_buffer.at(0+readIndex) != static_cast<char> (FRAME_HEAD_1) || m_buffer.at(1+readIndex) != static_cast<char>(FRAME_HEAD_2)){
+        if(m_buffer.at(readIndex) != static_cast<char> (FRAME_HEAD_1) || m_buffer.at(readIndex+1) != static_cast<char>(FRAME_HEAD_2)){
            // m_buffer.remove(0,1);
             readIndex++;
             continue;//直到找到帧头
@@ -84,7 +84,7 @@ void ProtocolParser::processData(){
     }
 }
 
-void ProtocolParser::buildPacket(Frame frame){//应用层封包
+void ProtocolParser::buildPacket(const Frame &frame){//应用层封包
 
     QByteArray packet;
     packet.append(static_cast<char>(FRAME_HEAD_1));//帧头

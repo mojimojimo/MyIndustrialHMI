@@ -25,7 +25,7 @@ public:
     ~DeviceManager();
 
 public slots:
-    void onFrameReceived(Frame frame);//<-Parser
+    void onFrameReceived(const Frame &frame);//<-Parser
     void onSendData(char funcCode, const QByteArray &dataContent);//<-UI
     void requestOpen(int type,QString portName,int baudRate);//<-UI
     void requestClose();//<-UI
@@ -33,7 +33,7 @@ public slots:
 signals:
     void signalOpen(QString target,int portOrBaud);//->worker
     void signalClose();//->worker
-    void sendFrame(Frame frame);//->Parser
+    void sendFrame(const Frame &frame);//->Parser
     void dataReceived(int type,double value);//->UI
     void logBusiness(const QString &text, bool isSend);//->UI
     void statusChanged(bool isOpen);//->UI

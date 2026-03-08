@@ -1,6 +1,8 @@
 #ifndef PROTOCOLDATA_H
 #define PROTOCOLDATA_H
 
+#include <QMetaType>
+
 enum FuncCode : char{
     FUNC_READ_TEMP = 0x03,//查询温度
     FUNC_TEMP_DATA = 0x01,//温度返回
@@ -17,6 +19,6 @@ struct Frame{
     quint8 funcCode;//
     QByteArray payload;
 };
-//Q_DECLARE_METATYPE(Frame) 注册元类型
+Q_DECLARE_METATYPE(Frame) //注册元类型
 
 #endif // PROTOCOLDATA_H

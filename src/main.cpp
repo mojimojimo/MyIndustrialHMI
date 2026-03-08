@@ -4,8 +4,9 @@
 
 int main(int argc, char *argv[])
 {
-    //qRegisterMetaType<Frame>("Frame");
     QApplication a(argc, argv);
+
+    qRegisterMetaType<Frame>("Frame");
 
     //初始化数据库
     if (!DatabaseManager::instance().init()) {

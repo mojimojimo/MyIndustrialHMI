@@ -11,12 +11,12 @@ public:
     explicit ProtocolParser(QObject *parent = nullptr);
 
 public slots:
-    void buildPacket(Frame frame);//
+    void buildPacket(const Frame &frame);//
     void onRawDataReceived(const QByteArray &rawdata);
 
 signals:
     void sendRawData(const QByteArray &rawdata);//->Serial
-    void frameReceived(Frame frame);//->Device
+    void frameReceived(const Frame &frame);//->Device
     void logProtocol(const QString &text,bool isSend);//->UI
 
 private:
