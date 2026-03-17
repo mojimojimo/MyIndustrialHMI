@@ -16,14 +16,15 @@ public slots:
 
 signals:
     void sendRawData(const QByteArray &rawdata);//->Serial
-    void frameReceived(const Frame &frame);//->Device
+    void RealtimeDataParsed(const DeviceData &data);//->Device 实时数据
     void logProtocol(const QString &text,bool isSend);//->UI
 
 private:
 
-    void processData();//解析数据
+    void processRawData();//解析数据
+    void processFrame(const Frame &frame);
     QByteArray m_buffer;//全局接收缓冲区
-    int readIndex=0;
+    int m_readIndex=0;
 };
 
 #endif // PROTOCOLPARSER_H

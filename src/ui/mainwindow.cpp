@@ -147,20 +147,18 @@ void MainWindow::onStatusChanged(bool isOpen){
 
 }
 
-void MainWindow::onDataReceived(int type, double value){
+void MainWindow::onDataReceived(const DeviceData &data){
 
-    if(type==1){
-         ui->lblTemp->setText(QString::number(value,'f',1) + " ℃ ");
-         ui->lcdTemp->display(QString::number(value,'f',1));
-         QString cleanLog = QString("解析成功：温度 = %1 ℃").arg(value);//业务日志 (Text View)
+    qDebug()<<"wolail";
+        // ui->lblTemp->setText(QString::number(value,'f',1) + " ℃ ");
+         ui->lcdTemp->display(QString::number(data.actualTemperature,'f',1));
+         QString cleanLog = QString("解析成功：温度 = %1 ℃").arg(data.actualTemperature);//业务日志 (Text View)
          writeLog(cleanLog, false);
-
-    }
 
     // 获取当前时间戳 (秒)
     double key = QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0;
     // 添加数据点
-    ui->plotTemp->graph(0)->addData(key, value);
+    ui->plotTemp->graph(0)->addData(key, data.actualTemperature);
     // 移除太老的数据 (比如只保留最近 100 个点，防止内存爆掉)
     ui->plotTemp->graph(0)->data()->removeBefore(key - 100);
     // 实现自动滚动，最右侧边界key，跨度60s

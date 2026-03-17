@@ -18,7 +18,7 @@ DeviceManager::DeviceManager(QObject *parent)
 
         if(state==DeviceState::Connected || state==DeviceState::Reconnecting){
             //QByteArray queryCmd = QByteArray::fromHex("AA 55 03 00 03 FF");
-            onSendData(FUNC_READ_TEMP,QByteArray());
+            onSendData(FUNC_HEARTBEAT,QByteArray());
             // 发送日志
             emit logBusiness("Heartbeat sent!",true); // true表示发送
         }
@@ -41,7 +41,7 @@ DeviceManager::~DeviceManager(){
     teardownPipeline();
 }
 
-void DeviceManager::onFrameReceived(const Frame &frame){
+void DeviceManager::onRealtimeDataParsed(const DeviceData &data){
     responseTimer.restart();
 
     if(state == DeviceState::Reconnecting){
@@ -49,20 +49,11 @@ void DeviceManager::onFrameReceived(const Frame &frame){
         setState(DeviceState::Connected);
     }
 
-    if(frame.funcCode == FUNC_TEMP_DATA){
-        if(frame.payload.size()>=2){
-            //1B 温度值 uint8_t
-            unsigned char highByte = static_cast<unsigned char>( frame.payload.at(0));//?-3°C?
-            unsigned char lowByte = static_cast<unsigned char>( frame.payload.at(1));//?-3°C?
-            short temp = (highByte<<8) | lowByte;//int16_t
-            double realTemp = temp / 10.0;
-            DatabaseManager::instance().insertData(realTemp);
-            emit dataReceived(1,realTemp);
-            qDebug()<<"温度:"<<realTemp<<" ℃ ";
-        }
-    }else if(frame.funcCode == 0x02){
-        qDebug()<<"电机转速:";
-    }
+    // 处理温湿度、报警逻辑，存数据库，写日志，发给UI
+
+    //DatabaseManager::instance().insertData(realTemp);
+    emit dataReceived(data);
+
 }
 
 void DeviceManager::onSendData(char funcCode, const QByteArray &dataContent){
@@ -153,7 +144,7 @@ void DeviceManager::setupPipeline(int type){
 
     //接收链路
     connect(worker,&CommWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
-    connect(parser,&ProtocolParser::frameReceived,this,&DeviceManager::onFrameReceived);
+    connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
 
     connect(worker,&CommWorker::StatusChanged,this,[=](bool isOpen){
         if(isOpen){
