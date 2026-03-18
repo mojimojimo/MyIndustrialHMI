@@ -41,19 +41,23 @@ DeviceManager::~DeviceManager(){
     teardownPipeline();
 }
 
-void DeviceManager::onRealtimeDataParsed(const DeviceData &data){
-    responseTimer.restart();
+void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
 
-    if(state == DeviceState::Reconnecting){
+    responseTimer.restart();// 重启定时器
+
+    if(state == DeviceState::Reconnecting){ // 恢复连接
         //emit logBusiness("网络波动已恢复", false);
         setState(DeviceState::Connected);
     }
 
+    QMutexLocker locker(&m_dataMutex);
+
     // 处理温湿度、报警逻辑，存数据库，写日志，发给UI
 
-    //DatabaseManager::instance().insertData(realTemp);
-    emit dataReceived(data);
+    m_latestData = newData;// 连续变量覆盖更新
 
+    //DatabaseManager::instance().insertData(realTemp);
+    //emit dataReceived(data);
 }
 
 void DeviceManager::onSendData(char funcCode, const QByteArray &dataContent){
@@ -144,7 +148,9 @@ void DeviceManager::setupPipeline(int type){
 
     //接收链路
     connect(worker,&CommWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
-    connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
+    //connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
+    connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed,Qt::DirectConnection);
+
 
     connect(worker,&CommWorker::StatusChanged,this,[=](bool isOpen){
         if(isOpen){

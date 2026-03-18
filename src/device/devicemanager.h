@@ -8,6 +8,8 @@
 #include "commworker.h"
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QMutex>
+#include <QMutexLocker>
 
 enum class DeviceState{
     Disconnected,
@@ -23,20 +25,24 @@ class DeviceManager : public QObject
 public:
     explicit DeviceManager(QObject *parent = nullptr);
     ~DeviceManager();
+    DeviceData getLatestData(){
+        QMutexLocker locker(&m_dataMutex);
+        return m_latestData;
+    }
 
 public slots:
-    void onRealtimeDataParsed(const DeviceData &data);//<-Parser
-    void onSendData(char funcCode, const QByteArray &dataContent);//<-UI
-    void requestOpen(int type,QString portName,int baudRate);//<-UI
-    void requestClose();//<-UI
+    void onRealtimeDataParsed(const DeviceData &newData);//<-Parser
+    void onSendData(char funcCode, const QByteArray &dataContent); //<-UI
+    void requestOpen(int type,QString portName,int baudRate);      //<-UI
+    void requestClose();                                           //<-UI
 
 signals:
-    void signalOpen(QString target,int portOrBaud);//->worker
-    void signalClose();//->worker
-    void sendFrame(const Frame &frame);//->Parser
-    void dataReceived(const DeviceData &data);//->UI
-    void logBusiness(const QString &text, bool isSend);//->UI
-    void statusChanged(bool isOpen);//->UI
+    void signalOpen(QString target,int portOrBaud);     //->worker
+    void signalClose();                                 //->worker
+    void sendFrame(const Frame &frame);                 //->Parser
+    void dataReceived(const DeviceData &data);          //->UI
+    void logBusiness(const QString &text, bool isSend); //->UI
+    void statusChanged(bool isOpen);                    //->UI
     void errorOccurred(QString errorMsg);
 
 private:
@@ -45,6 +51,9 @@ private:
     QElapsedTimer responseTimer;
     DeviceState state = DeviceState::Disconnected;
     int retryCount = 0;
+
+    DeviceData m_latestData;
+    QMutex m_dataMutex;// 跨线程数据保护锁
 
     QThread *thread = nullptr;
     CommWorker *worker = nullptr;

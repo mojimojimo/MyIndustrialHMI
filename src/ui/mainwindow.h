@@ -33,6 +33,7 @@ private:
     void refreshPorts();
     void initChart();
     void closeEvent(QCloseEvent *event);
+    QTimer *refreshTimer = nullptr;
 
 };
 #endif // MAINWINDOW_H

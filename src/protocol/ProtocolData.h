@@ -17,20 +17,20 @@ struct DeviceData{
 //     FUNC_SET_PARAM = 0x10 //下发参数
 // };
 
-// enum FuncCode : quint8 {
-//     FUNC_HEARTBEAT       = 0x00,
-//     // === 0x01 ~ 0x0F: 数据主动上报类 ===
-//     FUNC_REPORT_ALL_DATA = 0x01,  // 下位机主动上报所有实时数据 (温湿度、状态、报警码)
-//     FUNC_REPORT_ALARM    = 0x02,  // 下位机主动上报紧急故障 (可选：用于极速中断报警)
+enum FuncCode : quint8 {
+    FUNC_HEARTBEAT       = 0x00,
+    // === 0x01 ~ 0x0F: 数据主动上报类 ===
+    FUNC_REPORT_ALL_DATA = 0x01,  // 下位机主动上报所有实时数据 (温湿度、状态、报警码)
+    FUNC_REPORT_ALARM    = 0x02,  // 下位机主动上报紧急故障 (可选：用于极速中断报警)
 
-//     // === 0x10 ~ 0x1F: 上位机下发控制类 ===
-//     FUNC_SET_PARAM       = 0x10,  // 上位机下发参数 (如修改温度阈值)
-//     FUNC_CTRL_DEVICE     = 0x11,  // 上位机控制指令 (如远程消音、强制化霜)
+    // === 0x10 ~ 0x1F: 上位机下发控制类 ===
+    FUNC_SET_PARAM       = 0x10,  // 上位机下发参数 (如修改温度阈值)
+    FUNC_CTRL_DEVICE     = 0x11,  // 上位机控制指令 (如远程消音、强制化霜)
 
-//     // === 0x20 ~ 0x2F: 上位机主动查询类 ===
-//     FUNC_READ_ALL_DATA   = 0x20,  // 上位机主动查询所有数据 (如上位机刚开机时同步状态)
-//     FUNC_READ_PARAM      = 0x21   // 上位机查询当前设定参数
-// };
+    // === 0x20 ~ 0x2F: 上位机主动查询类 ===
+    FUNC_READ_ALL_DATA   = 0x20,  // 上位机主动查询所有数据 (如上位机刚开机时同步状态)
+    FUNC_READ_PARAM      = 0x21   // 上位机查询当前设定参数
+};
 
 const char FRAME_HEAD_1 = static_cast<char> (0xAA);//?const char and enum
 const char FRAME_HEAD_2 = static_cast<char> (0x55);

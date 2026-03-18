@@ -35,8 +35,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     //发送数据
     connect(this,&MainWindow::signalSendData,device,&DeviceManager::onSendData);
-    //接收数据
-    connect(device,&DeviceManager::dataReceived,this,&MainWindow::onDataReceived);
+    //接收数据，定时主动向device拉取
+    //connect(device,&DeviceManager::dataReceived,this,&MainWindow::onDataReceived);
 
     connect(device,&DeviceManager::statusChanged,this,&MainWindow::onStatusChanged);
 
@@ -83,21 +83,41 @@ MainWindow::MainWindow(QWidget *parent)
         dlg.exec(); // 模态显示
     });
 
+    refreshTimer = new QTimer(this);
+    connect(refreshTimer,&QTimer::timeout,this,[=](){
+
+        //if(device未连接) return;
+
+        DeviceData curData = device->getLatestData();
+
+        ui->lcdTemp->display(QString::number(curData.actualTemperature,'f',1));
+        //ui->lcdHum->display(curData.actualHumidity);
+        //判断报警状态，更新UI
+        // if(curData.alarmCode != 0){
+
+        // }
+        //重绘实时曲线
+        //updatePlot(curData.actualTemperature);
+        onDataReceived(curData);
+
+    });
+    refreshTimer->setInterval(50);//50ms触发，而下位机1s才发一次，这样的话是多次读取同一数据
+
     //加载配置
     QSettings settings("config.ini", QSettings::IniFormat);
     QString lastPort = settings.value("PortName").toString();
     QString lastBaud = settings.value("Baud").toString();
-    QString lastIp = settings.value("IP").toString();
-    QString port = settings.value("Port").toString();
+    QString lastIp   = settings.value("IP").toString();
+    QString port     = settings.value("Port").toString();
+    double lastTemp  = settings.value("TargetTemp",0.0).toDouble();
 
     int idx1 = ui->portList->findText(lastPort);
-    if(idx1!= -1) ui->portList->setCurrentIndex(idx1);
+    if(idx1 != -1) ui->portList->setCurrentIndex(idx1);
     int idx2 = ui->baudList->findText(lastBaud);
-    if(idx2!= -1) ui->baudList->setCurrentIndex(idx2);
+    if(idx2 != -1) ui->baudList->setCurrentIndex(idx2);
+
     ui->ipEdit->setText(lastIp);
     ui->portEdit->setText(port);
-
-    double lastTemp = settings.value("TargetTemp",0.0).toDouble();
     ui->targetTemp->setValue(lastTemp);
 
     restoreGeometry(settings.value("Geometry").toByteArray());
@@ -125,7 +145,7 @@ void MainWindow::onStatusChanged(bool isOpen){
         ui->btnOpen->setEnabled(false);
         ui->btnClose->setEnabled(true);
         ui->btnSetTemp->setEnabled(true);
-        //emit signalDeviceStart(true);
+        refreshTimer->start();
 
     }else{
         ui->lblStatus->setText("未连接");
@@ -142,16 +162,15 @@ void MainWindow::onStatusChanged(bool isOpen){
         ui->btnOpen->setEnabled(true);
         ui->btnClose->setEnabled(false);
         ui->btnSetTemp->setEnabled(false);
-        //emit signalDeviceStart(false);
+        refreshTimer->stop();
     }
 
 }
 
 void MainWindow::onDataReceived(const DeviceData &data){
 
-    qDebug()<<"wolail";
         // ui->lblTemp->setText(QString::number(value,'f',1) + " ℃ ");
-         ui->lcdTemp->display(QString::number(data.actualTemperature,'f',1));
+        // ui->lcdTemp->display(QString::number(data.actualTemperature,'f',1));
          QString cleanLog = QString("解析成功：温度 = %1 ℃").arg(data.actualTemperature);//业务日志 (Text View)
          writeLog(cleanLog, false);
 
