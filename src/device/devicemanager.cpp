@@ -1,7 +1,6 @@
 #include "devicemanager.h"
 #include "serialworker.h"
 #include "tcpworker.h"
-#include "databasemanager.h"
 #include <QDebug>
 #include <QDateTime>
 
@@ -10,11 +9,13 @@ DeviceManager::DeviceManager(QObject *parent)
 {
     timer = new QTimer(this);
     timeoutTimer = new QTimer(this);
+    m_dbSampleTimer = new QTimer(this);
     timer->setInterval(1000);
     timeoutTimer->setInterval(500);
+    m_dbSampleTimer->setInterval(1000);
 
     //定时发送心跳包
-    connect(timer,&QTimer::timeout,[=](){
+    connect(timer,&QTimer::timeout,this,[=](){
 
         if(state==DeviceState::Connected || state==DeviceState::Reconnecting){
             //QByteArray queryCmd = QByteArray::fromHex("AA 55 03 00 03 FF");
@@ -24,7 +25,7 @@ DeviceManager::DeviceManager(QObject *parent)
         }
     });
 
-    connect(timeoutTimer,&QTimer::timeout,[=](){
+    connect(timeoutTimer,&QTimer::timeout,this,[=](){
         if(!responseTimer.isValid()) return;
         if(responseTimer.elapsed() > 2000){
             setState(DeviceState::Reconnecting);
@@ -35,6 +36,14 @@ DeviceManager::DeviceManager(QObject *parent)
             }
         }
     });
+
+    //定时采样数据存入db
+    connect(m_dbSampleTimer,&QTimer::timeout,this,[=](){
+
+         if(state != DeviceState::Connected || m_latestData.actualTemperature == 0) return;//加一个判断
+        QMutexLocker locker(&m_dataMutex);
+        emit sigSaveEnvData(m_latestData.actualTemperature, m_latestData.actualHumidity);
+    });
 }
 
 DeviceManager::~DeviceManager(){
@@ -44,7 +53,11 @@ DeviceManager::~DeviceManager(){
 void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
 
     responseTimer.restart();// 重启定时器
-
+    // qDebug()<<"door"<<newData.doorStatus;
+    // qDebug()<<"temp"<<newData.actualTemperature;
+    // qDebug()<<"hum"<<newData.actualHumidity;
+    // qDebug()<<"alarm"<<newData.alarmCode;
+    // qDebug()<<"compress"<<newData.compressorStatus;
     if(state == DeviceState::Reconnecting){ // 恢复连接
         //emit logBusiness("网络波动已恢复", false);
         setState(DeviceState::Connected);
@@ -54,10 +67,48 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
 
     // 处理温湿度、报警逻辑，存数据库，写日志，发给UI
 
-    m_latestData = newData;// 连续变量覆盖更新
+    // 离散变量：状态突变检测
+    // 门禁状态
+    if (m_latestData.doorStatus != newData.doorStatus) {
 
-    //DatabaseManager::instance().insertData(realTemp);
-    //emit dataReceived(data);
+         qWarning() << "[系统事件] 箱门状态发生改变，当前:" << newData.doorStatus;
+        QString statusStr = (newData.doorStatus == 1)? "被打开" :"已关闭";
+        QString logMsg = QString("冷藏箱门%1").arg(statusStr);
+        // 记录日志
+        // 通知UI
+
+        // 录入审计数据库
+        emit sigSaveEventLog("DOOR_EVENT", logMsg);
+    }
+    // 压缩机状态
+    if (m_latestData.compressorStatus != newData.compressorStatus) {
+
+        qWarning() << "[系统事件] 压缩机状态发生改变，当前:" << newData.compressorStatus;
+
+        QString statusStr = (newData.compressorStatus == 1)? "启动制冷" : "停止待机";
+        QString logMsg = QString("压缩机%1").arg(statusStr);
+        // 记录日志
+        // 通知UI
+
+        // 录入审计数据库
+        emit sigSaveEventLog("SYS_EVENT", logMsg);
+    }
+    // 报警码
+    if (m_latestData.alarmCode != newData.alarmCode) {
+        qWarning() << "[警报] 报警码变更！旧:" << m_latestData.alarmCode << " 新:" << newData.alarmCode;
+        if(newData.alarmCode != 0){ // 产生报警
+             QString logMsg = QString("触发系统级报警！故障码: %1").arg(newData.alarmCode);
+            // 通知UI
+            // 记录日志
+            emit sigSaveEventLog("ALARM", logMsg);
+        } else {                    // 报警解除
+            // 通知UI
+            // 记录日志
+            emit sigSaveEventLog("ALARM_CLEAR", "系统报警已解除");
+        }
+    }
+
+    m_latestData = newData;// 连续变量：覆盖更新
 }
 
 void DeviceManager::onSendData(char funcCode, const QByteArray &dataContent){
@@ -91,6 +142,7 @@ void DeviceManager::setState(DeviceState newState){
         timer->start();
         timeoutTimer->start();
         responseTimer.start();
+        m_dbSampleTimer->start();
         retryCount=0;//
         qDebug()<<"设备已在线";
         break;
@@ -106,8 +158,8 @@ void DeviceManager::setState(DeviceState newState){
     case DeviceState::Error:
         timeoutTimer->stop();//顺序
         timer->stop();
+        m_dbSampleTimer->stop();
         emit logBusiness("设备已离线 (最大重试次数已满)",false);//
-        //setState(DeviceState::Disconnected);
         requestClose();
         break;
 
@@ -115,7 +167,7 @@ void DeviceManager::setState(DeviceState newState){
         timer->stop();
         timeoutTimer->stop();
         responseTimer.invalidate();
-        //requestClose();
+        m_dbSampleTimer->stop();
         break;
 
     }
@@ -126,17 +178,21 @@ void DeviceManager::setupPipeline(int type){
     //清理已有线程/对象
     teardownPipeline();
 
-    thread = new QThread;//注意内存泄漏
+    workThread = new QThread();//注意内存泄漏
 
     if(type == 0){
         worker = new SerialWorker;
     }else{
         worker = new TcpWorker;
     }
-
     parser = new ProtocolParser;
-    worker->moveToThread(thread);
-    parser->moveToThread(thread);
+
+    worker->moveToThread(workThread);
+    parser->moveToThread(workThread);
+
+    dbThread = new QThread(this);
+    dbManager = new DatabaseManager;
+    dbManager->moveToThread(dbThread);
 
     //连接/断开连接
     connect(this,&DeviceManager::signalOpen,worker,&CommWorker::open);
@@ -151,7 +207,7 @@ void DeviceManager::setupPipeline(int type){
     //connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
     connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed,Qt::DirectConnection);
 
-
+    //状态链路
     connect(worker,&CommWorker::StatusChanged,this,[=](bool isOpen){
         if(isOpen){
             setState(DeviceState::Connected);
@@ -165,7 +221,7 @@ void DeviceManager::setupPipeline(int type){
         }
     });
 
-    //写日志：区分信号接力和信号连信号
+    //日志链路：区分信号接力和信号连信号
     connect(worker,&CommWorker::rawDataReceived,this,[=](QByteArray rawdata){
         //if (ui->chkHexDisplay->isChecked()) {    //原始日志 (Hex View)
             QString hexLog = "原始数据: " + rawdata.toHex(' ').toUpper();
@@ -181,23 +237,38 @@ void DeviceManager::setupPipeline(int type){
        emit errorOccurred(errorMsg);
     });
 
-    //线程结束后删除对象
-    connect(thread, &QThread::finished, worker, &CommWorker::deleteLater);
-    connect(thread, &QThread::finished, parser, &ProtocolParser::deleteLater);
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    //初始化数据库连接
+    connect(dbThread, &QThread::started, dbManager, &DatabaseManager::init);
 
-    thread->start();
+    //存储链路
+    connect(this, &DeviceManager::sigSaveEnvData, dbManager, &DatabaseManager::onInsertEnvData);
+    connect(this, &DeviceManager::sigSaveEventLog, dbManager, &DatabaseManager::onInsertEvent);
+
+    //线程结束后删除对象
+    connect(workThread, &QThread::finished, worker, &CommWorker::deleteLater);
+    connect(workThread, &QThread::finished, parser, &ProtocolParser::deleteLater);
+    connect(workThread, &QThread::finished, workThread, &QThread::deleteLater);
+    connect(dbThread, &QThread::finished, dbManager, &DatabaseManager::deleteLater);
+
+    workThread->start();
+    dbThread->start();
 }
 
 void DeviceManager::teardownPipeline(){
 
-    if (thread != nullptr && thread->isRunning()) {
-        thread->quit(); // 请求退出事件循环
-        thread->wait(); // 主线程等待子线程真正退出；线程结束了，不再用worker了，此时删它就安全
+    if (workThread != nullptr && workThread->isRunning()) {
+        workThread->quit(); // 请求退出事件循环
+        workThread->wait(); // 主线程等待子线程真正退出；线程结束了，不再用worker了，此时删它就安全
+    }
+
+    if (dbThread != nullptr && dbThread->isRunning()) {
+        dbThread->quit();
+        dbThread->wait();
     }
 
     // 指针置空，防止野指针
     worker = nullptr;
     parser = nullptr;
-    thread = nullptr;
+    workThread = nullptr;
+    dbManager = nullptr;
 }

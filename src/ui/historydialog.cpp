@@ -40,26 +40,26 @@ void HistoryDialog::initChart(){
 }
 
 void HistoryDialog::on_btnQuery_clicked() {
-    QDateTime start = ui->dtStart->dateTime();
-    QDateTime end = ui->dtEnd->dateTime();
+//     QDateTime start = ui->dtStart->dateTime();
+//     QDateTime end = ui->dtEnd->dateTime();
 
-    //查询数据
-    auto dataList = DatabaseManager::instance().queryHistory(start, end);
+//     //查询数据
+//     auto dataList = DatabaseManager::instance().queryHistory(start, end);
 
-    if (dataList.isEmpty()) {
-        QMessageBox::information(this, "提示", "该时间段无数据！");
-        return;
-    }
+//     if (dataList.isEmpty()) {
+//         QMessageBox::information(this, "提示", "该时间段无数据！");
+//         return;
+//     }
 
-    //转换数据给QCustomPlot
-    QVector<double> x(dataList.size()), y(dataList.size());
-    for (int i = 0; i < dataList.size(); ++i) {
-        x[i] = dataList[i].timestamp / 1000.0; //时间轴单位是秒
-        y[i] = dataList[i].value;
-    }
+//     //转换数据给QCustomPlot
+//     QVector<double> x(dataList.size()), y(dataList.size());
+//     for (int i = 0; i < dataList.size(); ++i) {
+//         x[i] = dataList[i].timestamp / 1000.0; //时间轴单位是秒
+//         y[i] = dataList[i].value;
+//     }
 
-    //绘图
-    ui->plotHistory->graph(0)->setData(x, y);
-    ui->plotHistory->rescaleAxes();
-    ui->plotHistory->replot();
+//     //绘图
+//     ui->plotHistory->graph(0)->setData(x, y);
+//     ui->plotHistory->rescaleAxes();
+//     ui->plotHistory->replot();
 }

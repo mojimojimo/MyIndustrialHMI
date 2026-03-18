@@ -14,19 +14,23 @@ class DatabaseManager : public QObject
 {
     Q_OBJECT
 public:
-    static DatabaseManager& instance(){
-        static DatabaseManager instance;
-        return instance;
-    }
-
+    // static DatabaseManager& instance(){
+    //     static DatabaseManager instance;
+    //     return instance;
+    // }
+    DatabaseManager(){};
+    ~DatabaseManager();
     bool init();
-    void insertData(double value);
-    QList<HistoryData> queryHistory(const QDateTime &start,const QDateTime& end);
+
+    //QList<HistoryData> queryHistory(const QDateTime &start,const QDateTime& end);
+
+public slots:
+    void onInsertEnvData(double temp, double hum);
+    void onInsertEvent(const QString &type, const QString &desc);
 
 signals:
 
 private:
-    DatabaseManager(){};
     QSqlDatabase m_db;
 };
 

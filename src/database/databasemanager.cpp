@@ -4,31 +4,51 @@
 #include <QSqlError>
 
 bool DatabaseManager::init(){
-    m_db = QSqlDatabase::addDatabase("QSQLITE");
-    m_db.setDatabaseName("sensor_data.db");
+
+    //每个数据库连接只能在创建它的线程中使用
+    m_db = QSqlDatabase::addDatabase("QSQLITE","MedicalDbConnection");
+    m_db.setDatabaseName("medical_sensor.db");
 
     if(!m_db.open()){
         qDebug()<<"Error:Failed to connect database."<<m_db.lastError();
         return false;
     }
 
-    QSqlQuery query;
-    QString createTable = R"(
-        create table if not exists temperature_records(
+    QSqlQuery query(m_db);
+
+    // 创建环境数据表（温湿度）
+    QString createEnvTable = R"(
+        create table if not exists env_history(
             id integer primary key autoincrement,
-            timestamp datetime,
-            value real
+            timestamp datetime default CURRENT_TIMESTAMP,
+            temperature REAL,
+            humidity REAL
         )
     )";
-
-    if(!query.exec(createTable)){
-        qDebug()<<"Create table error:"<<query.lastError();
+    if(!query.exec(createEnvTable)){
+        qDebug()<<"Create table env_history error:"<<query.lastError();
         return false;
     }
+
+    //创建突发事件表
+    QString createEventTable = R"(
+        create table if not exists event_logs(
+            id integer primary key autoincrement,
+            timestamp datetime default CURRENT_TIMESTAMP,
+            event_type VARCHAR(20),
+            description VARCHAR(100)
+        )
+    )";
+    if(!query.exec(createEventTable)){
+        qDebug()<<"Create table event_logs error:"<<query.lastError();
+        return false;
+    }
+
+    qDebug()<<"DB is ok!";
     return true;
 }
 
-void DatabaseManager::insertData(double value){
+void DatabaseManager::onInsertEnvData(double temp, double hum){
 
     //auto timestamp = QDateTime::currentDateTime();
     //sql注入
@@ -36,34 +56,57 @@ void DatabaseManager::insertData(double value){
     //      qDebug()<<"Insert error:"<<query.lastError();
     // }
 
-    QSqlQuery query;
-    query.prepare("insert into temperature_records(timestamp, value) values (?,?)");//参数绑定：分离解析
-    query.addBindValue(QDateTime::currentDateTime());
-    query.addBindValue(value);
+    QSqlQuery query(m_db);
+    query.prepare("insert into env_history (temperature, humidity) values (?,?)");//参数绑定：分离解析
+    query.addBindValue(temp);
+    query.addBindValue(hum);
+
     if(!query.exec()){
-        qDebug()<<"Insert error:"<<query.lastError();
+        qDebug()<<"InsertEnvData error:"<<query.lastError();
     }
 }
 
-QList<HistoryData> DatabaseManager::queryHistory(const QDateTime &start,const QDateTime& end){
-    QList<HistoryData> list;
-    QSqlQuery query;//"  "
-    query.prepare("select timestamp,value from temperature_records "
-                  "where timestamp between ? and ? order by timestamp asc");
-    query.addBindValue(start);
-    query.addBindValue(end);
+void DatabaseManager::onInsertEvent(const QString &type, const QString &desc){
+    QSqlQuery query(m_db);
+    query.prepare("insert into event_logs (event_type, description) values (?,?)");//参数绑定：分离解析
+    query.addBindValue(type);
+    query.addBindValue(desc);
 
-    if(query.exec()){
-        while(query.next()){
-            HistoryData data;
-            QDateTime dt = query.value(0).toDateTime();
-            data.timestamp = dt.toMSecsSinceEpoch();
-            data.value = query.value(1).toDouble();
-            list.append(data);
-        }
-
-    }else{
-        qDebug()<<"Query history error:"<<query.lastError();
+    if(!query.exec()){
+        qDebug()<<"InsertEvent error:"<<query.lastError();
     }
-    return list;
+}
+
+// QList<HistoryData> DatabaseManager::queryHistory(const QDateTime &start,const QDateTime& end){
+//     QList<HistoryData> list;
+//     QSqlQuery query(m_db);//"  "
+//     query.prepare("select timestamp,value from temperature_records "
+//                   "where timestamp between ? and ? order by timestamp asc");
+//     query.addBindValue(start);
+//     query.addBindValue(end);
+
+//     if(query.exec()){
+//         while(query.next()){
+//             HistoryData data;
+//             QDateTime dt = query.value(0).toDateTime();
+//             data.timestamp = dt.toMSecsSinceEpoch();
+//             data.value = query.value(1).toDouble();
+//             list.append(data);
+//         }
+
+//     }else{
+//         qDebug()<<"Query history error:"<<query.lastError();
+//     }
+//     return list;
+// }
+
+DatabaseManager::~DatabaseManager()
+{
+    if (m_db.isOpen()) {
+        m_db.close();
+    }
+
+    // 移除数据库连接
+    m_db = QSqlDatabase(); // 释放对连接的引用
+    QSqlDatabase::removeDatabase("MedicalDbConnection");
 }

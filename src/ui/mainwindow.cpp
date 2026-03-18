@@ -101,7 +101,7 @@ MainWindow::MainWindow(QWidget *parent)
         onDataReceived(curData);
 
     });
-    refreshTimer->setInterval(50);//50ms触发，而下位机1s才发一次，这样的话是多次读取同一数据
+    refreshTimer->setInterval(50);//50ms触发，而下位机1s才发一次，读写分离，暂时多次读取同一数据
 
     //加载配置
     QSettings settings("config.ini", QSettings::IniFormat);

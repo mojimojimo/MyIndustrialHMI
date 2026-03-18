@@ -124,7 +124,26 @@ void ProtocolParser::processFrame(const Frame &frame) {
     //}
 
 
-
+    // switch (frame.funcCode) {
+    // case 0x01: { // FUNC_REPORT_ALL_DATA
+    //     DeviceData data = parseDeviceData(frame.payload); // 提取的私有解析函数
+    //     emit realtimeDataParsed(data); // 发送具体信号
+    //     break;
+    // }
+    // case 0x03: { // FUNC_READ_PARAM_ACK
+    //     DeviceConfigParam param = parseConfigParam(frame.payload);
+    //     emit deviceParamReturned(param);
+    //     break;
+    // }
+    // case 0x10: { // FUNC_SET_PARAM_ACK
+    //     bool success = (frame.payload[0] == 0x00); // 假设0x00代表成功
+    //     emit paramSetAckReceived(success);
+    //     break;
+    // }
+    // default:
+    //     qWarning() << "Unknown FuncCode:" << Qt::hex << frame.funcCode;
+    //     break;
+    // }
 }
 
 void ProtocolParser::buildPacket(const Frame &frame){//应用层封包
