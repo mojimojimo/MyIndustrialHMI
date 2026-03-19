@@ -50,6 +50,40 @@ DeviceManager::~DeviceManager(){
     teardownPipeline();
 }
 
+// void DeviceManager::setAlarmThresholds(double lower, double upper){
+//     QMutexLocker locker(&m_dataMutex);//?
+//     m_lowerLimit = lower;
+//     m_upperLimit = upper;
+//     qDebug() << "[业务] 报警阈值已更新 -> 下限:" << m_lowerLimit << " 上限:" << m_upperLimit;
+// }
+
+void DeviceManager::checkSoftAlarm(double currentValue, AlarmRule& rule) {
+    bool isOut = (currentValue > rule.upperLimit || currentValue < rule.lowerLimit);
+
+    if (isOut && !rule.isAlarming) {
+        // 刚刚越界，触发报警
+        QString msg = QString("【软报警】%1越界！当前: %2 %3 (安全范围: %4~%5)")
+                          .arg(rule.paramName)
+                          .arg(currentValue)
+                          .arg(rule.unit)
+                          .arg(rule.lowerLimit)
+                          .arg(rule.upperLimit);
+
+        //UI日志
+
+        emit sigSaveEventLog("SOFT_ALARM", msg);
+        rule.isAlarming = true;
+
+    } else if (!isOut && rule.isAlarming) {
+        // 数值恢复正常，报警解除
+        QString msg = QString("%1已恢复至安全区间。").arg(rule.paramName);
+        //UI日志
+
+        emit sigSaveEventLog("ALARM_CLEAR", msg);
+        rule.isAlarming = false;
+    }
+}
+
 void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
 
     responseTimer.restart();// 重启定时器
@@ -107,6 +141,10 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
             emit sigSaveEventLog("ALARM_CLEAR", "系统报警已解除");
         }
     }
+
+    // 温/湿度越界检测
+    checkSoftAlarm(newData.actualTemperature, m_tempRule); // 查温度
+    checkSoftAlarm(newData.actualHumidity, m_humRule);     // 查湿度
 
     m_latestData = newData;// 连续变量：覆盖更新
 }

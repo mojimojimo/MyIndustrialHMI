@@ -20,6 +20,17 @@ enum class DeviceState{
     Error
 };
 
+struct AlarmRule {
+    QString paramName;  // 参数名：温/湿度
+    QString unit;       // 单位：℃/%
+    double upperLimit;  // 上限阈值
+    double lowerLimit;  // 下限阈值
+    bool isAlarming;    // 报警状态标志
+
+    AlarmRule(QString name, QString u, double up, double low):
+        paramName(name), unit(u), upperLimit(up), lowerLimit(low), isAlarming(false) {}
+};
+
 class DeviceManager : public QObject
 {
     Q_OBJECT
@@ -36,6 +47,7 @@ public slots:
     void onSendData(char funcCode, const QByteArray &dataContent); //<-UI
     void requestOpen(int type,QString portName,int baudRate);      //<-UI
     void requestClose();                                           //<-UI
+    //void setAlarmThresholds(double lower, double upper, bool isTemp);   //<-UI
 
 signals:
     void signalOpen(QString target,int portOrBaud);     //->worker
@@ -71,6 +83,10 @@ private:
     void setState(DeviceState newState);
     void setupPipeline(int type);
     void teardownPipeline();
+
+    void checkSoftAlarm(double currentValue, AlarmRule &rule);// 软报警检测
+    AlarmRule m_tempRule{"温度", "℃", 8.0, 2.0};
+    AlarmRule m_humRule{"湿度", "%", 75.0, 35.0};
 
 };
 
