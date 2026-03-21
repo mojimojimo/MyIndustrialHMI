@@ -25,7 +25,7 @@ public slots:
     void writeLog(const QString &text,bool isSend);
 
 signals:
-    void signalSendData(char funcCode, const QByteArray &dataContent);//->Device
+    //void signalSendData(char funcCode, const QByteArray &dataContent);//->Device
 
 private:
     Ui::MainWindow *ui;

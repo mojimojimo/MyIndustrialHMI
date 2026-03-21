@@ -6,6 +6,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     qRegisterMetaType<DeviceData>("DeviceData");
+    qRegisterMetaType<ConfigData>("ConfigData");
     qRegisterMetaType<Frame>("Frame");
 
     MainWindow w;

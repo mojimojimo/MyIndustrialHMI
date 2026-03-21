@@ -46,7 +46,10 @@ public slots:
     void onRealtimeDataParsed(const DeviceData &newData);//<-Parser
     void onConfigParamLoaded(const ConfigData &data); //<-Parser
     void onCmdAckReceived(bool ack, quint8 errorCode); //<-Parser
-    void onSendData(char funcCode, const QByteArray &dataContent); //<-UI
+    //void onSendData(char funcCode, const QByteArray &dataContent); //<-UI
+    void requestReadParam(); //<-UI
+    void requestWriteParam(const ConfigData &config); //<-UI
+    void requestCmd(); //<-UI
     void requestOpen(int type,QString portName,int baudRate);      //<-UI
     void requestClose();                                           //<-UI
     //void setAlarmThresholds(double lower, double upper, bool isTemp);   //<-UI
@@ -54,7 +57,10 @@ public slots:
 signals:
     void signalOpen(QString target,int portOrBaud);     //->worker
     void signalClose();                                 //->worker
-    void sendFrame(const Frame &frame);                 //->Parser
+    void packReadParam(); //->Parser
+    void packWriteParam(const ConfigData &config); //->Parser
+    void packCmd(); //->Parser
+    //void sendFrame(const Frame &frame);                 //->Parser
     //void dataReceived(const DeviceData &data);          //->UI
     void logBusiness(const QString &text, bool isSend); //->UI
     void statusChanged(bool isOpen);                    //->UI

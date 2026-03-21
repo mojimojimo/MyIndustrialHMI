@@ -14,16 +14,16 @@ DeviceManager::DeviceManager(QObject *parent)
     timeoutTimer->setInterval(500);
     m_dbSampleTimer->setInterval(1000);
 
-    //定时发送心跳包
-    connect(timer,&QTimer::timeout,this,[=](){
+    // //定时发送心跳包
+    // connect(timer,&QTimer::timeout,this,[=](){
 
-        if(state==DeviceState::Connected || state==DeviceState::Reconnecting){
-            //QByteArray queryCmd = QByteArray::fromHex("AA 55 03 00 03 FF");
-            onSendData(0x00,QByteArray());
-            // 发送日志
-            emit logBusiness("Heartbeat sent!",true); // true表示发送
-        }
-    });
+    //     if(state==DeviceState::Connected || state==DeviceState::Reconnecting){
+    //         //QByteArray queryCmd = QByteArray::fromHex("AA 55 03 00 03 FF");
+    //         onSendData(0x00,QByteArray());
+    //         // 发送日志
+    //         emit logBusiness("Heartbeat sent!",true); // true表示发送
+    //     }
+    // });
 
     connect(timeoutTimer,&QTimer::timeout,this,[=](){
         if(!responseTimer.isValid()) return;
@@ -169,11 +169,25 @@ void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
     }
 }
 
-void DeviceManager::onSendData(char funcCode, const QByteArray &dataContent){
-    Frame frame;
-    frame.funcCode = funcCode;
-    frame.payload = dataContent;
-    emit sendFrame(frame);
+// void DeviceManager::onSendData(char funcCode, const QByteArray &dataContent){
+//     Frame frame;
+//     frame.funcCode = funcCode;
+//     frame.payload = dataContent;
+//     emit sendFrame(frame);
+// }
+
+void DeviceManager::requestReadParam(){
+    QMutexLocker locker(&m_configMutex);
+    emit packReadParam();
+}
+
+void DeviceManager::requestWriteParam(const ConfigData &config){
+    QMutexLocker locker(&m_configMutex);
+    emit packWriteParam(config);
+}
+
+void DeviceManager::requestCmd(){//default强制消音
+    emit packCmd();
 }
 
 void DeviceManager::requestOpen(int type,QString portName,int baudRate){
@@ -257,7 +271,10 @@ void DeviceManager::setupPipeline(int type){
     connect(this,&DeviceManager::signalClose,worker,&CommWorker::close);
 
     //发送链路
-    connect(this,&DeviceManager::sendFrame,parser,&ProtocolParser::buildPacket);
+    //connect(this,&DeviceManager::sendFrame,parser,&ProtocolParser::buildPacket);
+    connect(this,&DeviceManager::packReadParam,parser,&ProtocolParser::onPackReadParam);
+    connect(this,&DeviceManager::packWriteParam,parser,&ProtocolParser::onPackWriteParam);
+    connect(this,&DeviceManager::packCmd,parser,&ProtocolParser::onPackCmd);
     connect(parser,&ProtocolParser::sendRawData,worker,&CommWorker::sendData);
 
     //接收链路

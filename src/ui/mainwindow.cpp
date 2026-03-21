@@ -34,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
     DeviceManager *device = new DeviceManager(this);
 
     //发送数据
-    connect(this,&MainWindow::signalSendData,device,&DeviceManager::onSendData);
+    //connect(this,&MainWindow::signalSendData,device,&DeviceManager::onSendData);
     //接收数据，定时主动向device拉取
     //connect(device,&DeviceManager::dataReceived,this,&MainWindow::onDataReceived);
 
@@ -67,15 +67,26 @@ MainWindow::MainWindow(QWidget *parent)
         device->requestClose();
     });
 
-    connect(ui->btnSetTemp,&QPushButton::clicked,[=](){
-        double val = ui->targetTemp->value();
-        short sendVal = static_cast<short>(val*10);//定点数传输
-        QByteArray data;
-        data.append(static_cast<char>(sendVal>>8));//?
-        data.append(static_cast<char>(sendVal & 0xFF));
-        emit signalSendData(FUNC_SET_PARAM,data);
-        QString cleanLog = QString("下发目标温度：%1 ℃").arg(val);//业务日志
-        writeLog(cleanLog,true);//C2137
+    connect(ui->btnSetTemp,&QPushButton::clicked,[=](){//...
+        // double val = ui->targetTemp->value();
+        // short sendVal = static_cast<short>(val*10);//定点数传输
+        // QByteArray data;
+        // data.append(static_cast<char>(sendVal>>8));//?
+        // data.append(static_cast<char>(sendVal & 0xFF));
+        // emit signalSendData(FUNC_WRITE_PARAM,data);
+        // QString cleanLog = QString("下发目标温度：%1 ℃").arg(val);//业务日志
+        // writeLog(cleanLog,true);//C2137
+        ConfigData config;
+        config.targetTemperature = 5;
+        config.tempHighLimit     = 2;
+        config.tempLowLimit      = 8;
+        config.targetHumidity    = 50;
+        config.humidHighLimit    = 75;
+        config.humidLowLimit     = 35;
+        device->requestWriteParam(config);
+        //device->requestReadParam();
+        //device->requestCmd();
+
     });
 
     connect(ui->btnHistory,&QPushButton::clicked,[=](){

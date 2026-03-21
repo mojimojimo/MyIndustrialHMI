@@ -13,13 +13,13 @@ struct DeviceData{
 Q_DECLARE_METATYPE(DeviceData) //注册元类型
 
 struct ConfigData {
-    double targetTemperature;  // 目标温度
-    double tempHighLimit;      // 温度上限报警阈值
-    double tempLowLimit;       // 温度下限报警阈值
+    double targetTemperature = 0.0;  // 目标温度
+    double tempHighLimit = 0.0;      // 温度上限报警阈值
+    double tempLowLimit = 0.0;       // 温度下限报警阈值
 
-    double targetHumidity;     // 目标湿度
-    double humidHighLimit;     // 湿度上限报警阈值
-    double humidLowLimit;      // 湿度下限报警阈值
+    double targetHumidity = 0.0;     // 目标湿度
+    double humidHighLimit = 0.0;     // 湿度上限报警阈值
+    double humidLowLimit = 0.0;      // 湿度下限报警阈值
 
     //uint8_t doorAlarmDelaySec; // 开门超时报警延时
 };
@@ -39,7 +39,7 @@ enum FuncCode : quint8 {
     FUNC_CMD_ACK         = 0x80,   // 应答(payload:0x00)
 
     // 上位机下发控制类
-    FUNC_SET_PARAM      = 0x10,  // 上位机下发参数 (payload:ConfigData)
+    FUNC_WRITE_PARAM    = 0x10,  // 上位机下发参数 (payload:ConfigData)
     FUNC_CTRL_CMD       = 0x11,  // 上位机控制指令 (payload:远程消音0x01、强制化霜0x02)
     FUNC_READ_PARAM     = 0x20   // 上位机查询当前设定参数 (payload长度为0)
 

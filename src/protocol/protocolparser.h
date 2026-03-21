@@ -11,8 +11,11 @@ public:
     explicit ProtocolParser(QObject *parent = nullptr);
 
 public slots:
-    void buildPacket(const Frame &frame);//
+
     void onRawDataReceived(const QByteArray &rawdata);
+    void onPackReadParam();
+    void onPackWriteParam(const ConfigData &config);
+    void onPackCmd();
 
 signals:
     void sendRawData(const QByteArray &rawdata);//->Serial
@@ -25,6 +28,7 @@ private:
 
     void processRawData();//解析数据
     void processFrame(const Frame &frame);
+    void buildPacket(const Frame &frame);//
     QByteArray m_buffer;//全局接收缓冲区
     int m_readIndex=0;
 };

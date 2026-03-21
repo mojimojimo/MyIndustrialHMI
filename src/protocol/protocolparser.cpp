@@ -1,5 +1,6 @@
 #include "protocolparser.h"
 #include <QDebug>
+#include <QIODevice>
 ProtocolParser::ProtocolParser(QObject *parent)
     : QObject{parent}
 {
@@ -145,6 +146,38 @@ void ProtocolParser::processFrame(const Frame &frame) {
 
         emit cmdAckReceived(ack, result);
     }
+}
+
+void ProtocolParser::onPackReadParam(){
+    Frame frame;
+    frame.funcCode = FUNC_READ_PARAM;
+    frame.payload = QByteArray();
+    buildPacket(frame);
+}
+
+void ProtocolParser::onPackWriteParam(const ConfigData &config){
+
+    QByteArray payload;
+    QDataStream stream(&payload, QIODevice::WriteOnly);
+
+    stream << static_cast<qint16>(config.targetTemperature * 10.0);
+    stream << static_cast<qint16>(config.tempHighLimit * 10.0);
+    stream << static_cast<qint16>(config.tempLowLimit * 10.0);
+    stream << static_cast<quint16>(config.targetHumidity * 10.0);
+    stream << static_cast<quint16>(config.humidHighLimit * 10.0);
+    stream << static_cast<quint16>(config.humidLowLimit * 10.0);
+
+    Frame frame;
+    frame.funcCode = FUNC_WRITE_PARAM;
+    frame.payload = payload;
+    buildPacket(frame);
+}
+
+void ProtocolParser::onPackCmd(){
+    Frame frame;
+    frame.funcCode = FUNC_CTRL_CMD;
+    frame.payload = QByteArray::fromHex("01");//
+    buildPacket(frame);
 }
 
 void ProtocolParser::buildPacket(const Frame &frame){//应用层封包

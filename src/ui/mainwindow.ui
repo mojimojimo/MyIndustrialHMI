@@ -30,13 +30,13 @@
      <property name="geometry">
       <rect>
        <x>270</x>
-       <y>30</y>
+       <y>60</y>
        <width>111</width>
        <height>24</height>
       </rect>
      </property>
      <property name="text">
-      <string>下发温度</string>
+      <string>写入参数</string>
      </property>
     </widget>
     <widget class="QWidget" name="layoutWidget">
@@ -122,17 +122,17 @@
       <string>开锁</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="btnSetTemp_2">
+    <widget class="QPushButton" name="pushButton_4">
      <property name="geometry">
       <rect>
-       <x>270</x>
-       <y>80</y>
+       <x>240</x>
+       <y>160</y>
        <width>111</width>
        <height>24</height>
       </rect>
      </property>
      <property name="text">
-      <string>下发湿度</string>
+      <string>读取参数</string>
      </property>
     </widget>
    </widget>
