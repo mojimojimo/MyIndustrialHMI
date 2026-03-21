@@ -44,6 +44,8 @@ public:
 
 public slots:
     void onRealtimeDataParsed(const DeviceData &newData);//<-Parser
+    void onConfigParamLoaded(const ConfigData &data); //<-Parser
+    void onCmdAckReceived(bool ack, quint8 errorCode); //<-Parser
     void onSendData(char funcCode, const QByteArray &dataContent); //<-UI
     void requestOpen(int type,QString portName,int baudRate);      //<-UI
     void requestClose();                                           //<-UI
@@ -71,6 +73,7 @@ private:
 
     DeviceData m_latestData;
     QMutex m_dataMutex;             // 跨线程数据保护锁
+    QMutex m_configMutex;           // 参数配置保护锁
     QTimer *m_dbSampleTimer = nullptr;        // 数据库降采样定时器
 
     QThread *workThread = nullptr;

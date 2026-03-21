@@ -19,7 +19,7 @@ DeviceManager::DeviceManager(QObject *parent)
 
         if(state==DeviceState::Connected || state==DeviceState::Reconnecting){
             //QByteArray queryCmd = QByteArray::fromHex("AA 55 03 00 03 FF");
-            onSendData(FUNC_HEARTBEAT,QByteArray());
+            onSendData(0x00,QByteArray());
             // 发送日志
             emit logBusiness("Heartbeat sent!",true); // true表示发送
         }
@@ -149,6 +149,26 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
     m_latestData = newData;// 连续变量：覆盖更新
 }
 
+void DeviceManager::onConfigParamLoaded(const ConfigData &data){
+    QMutexLocker locker(&m_configMutex);
+    qDebug()<< "当前参数配置："<<data.targetTemperature<<data.tempHighLimit<<data.tempLowLimit
+             <<data.targetHumidity<<data.humidHighLimit <<data.humidLowLimit;
+    // 记录日志
+    // 通知UI
+
+
+}
+
+void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
+    if (ack) {
+        qDebug() << "底层执行成功！";
+    } else {
+        // 记录日志
+        // 通知UI
+        qDebug()<< QString("设置失败，底层拒绝执行，错误码: %1").arg(errorCode);
+    }
+}
+
 void DeviceManager::onSendData(char funcCode, const QByteArray &dataContent){
     Frame frame;
     frame.funcCode = funcCode;
@@ -244,6 +264,8 @@ void DeviceManager::setupPipeline(int type){
     connect(worker,&CommWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
     //connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
     connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed,Qt::DirectConnection);
+    connect(parser,&ProtocolParser::configParamLoaded,this,&DeviceManager::onConfigParamLoaded,Qt::DirectConnection);
+    connect(parser,&ProtocolParser::cmdAckReceived,this,&DeviceManager::onCmdAckReceived);
 
     //状态链路
     connect(worker,&CommWorker::StatusChanged,this,[=](bool isOpen){

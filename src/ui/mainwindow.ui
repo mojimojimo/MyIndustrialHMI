@@ -29,21 +29,21 @@
     <widget class="QPushButton" name="btnSetTemp">
      <property name="geometry">
       <rect>
-       <x>110</x>
-       <y>110</y>
+       <x>270</x>
+       <y>30</y>
        <width>111</width>
        <height>24</height>
       </rect>
      </property>
      <property name="text">
-      <string>下发设置</string>
+      <string>下发温度</string>
      </property>
     </widget>
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>50</x>
-       <y>40</y>
+       <x>40</x>
+       <y>20</y>
        <width>221</width>
        <height>41</height>
       </rect>
@@ -60,6 +60,80 @@
        <widget class="QDoubleSpinBox" name="targetTemp"/>
       </item>
      </layout>
+    </widget>
+    <widget class="QWidget" name="layoutWidget_3">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>70</y>
+       <width>221</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>目标湿度：</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="targetTemp_3"/>
+      </item>
+     </layout>
+    </widget>
+    <widget class="QPushButton" name="pushButton">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>120</y>
+       <width>75</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>消音</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton_2">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>150</y>
+       <width>75</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>化霜</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton_3">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>180</y>
+       <width>75</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>开锁</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnSetTemp_2">
+     <property name="geometry">
+      <rect>
+       <x>270</x>
+       <y>80</y>
+       <width>111</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>下发湿度</string>
+     </property>
     </widget>
    </widget>
    <widget class="QGroupBox" name="groupBox_2">
