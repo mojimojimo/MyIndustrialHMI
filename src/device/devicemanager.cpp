@@ -320,6 +320,9 @@ void DeviceManager::setupPipeline(int type){
     //存储链路
     connect(this, &DeviceManager::sigSaveEnvData, dbManager, &DatabaseManager::onInsertEnvData);
     connect(this, &DeviceManager::sigSaveEventLog, dbManager, &DatabaseManager::onInsertEvent);
+    //查询与接收历史数据
+    connect(this, &DeviceManager::sigQueryDbHistory, dbManager, &DatabaseManager::onQueryHistory);
+    connect(dbManager, &DatabaseManager::sigHistoryDataReady, this, &DeviceManager::sigDbHistoryReady);
 
     //线程结束后删除对象
     connect(workThread, &QThread::finished, worker, &CommWorker::deleteLater);

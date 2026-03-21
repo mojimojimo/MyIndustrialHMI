@@ -7,6 +7,7 @@ int main(int argc, char *argv[])
 
     qRegisterMetaType<DeviceData>("DeviceData");
     qRegisterMetaType<ConfigData>("ConfigData");
+    qRegisterMetaType<QList<HistoryData>>("QList<HistoryData>");
     qRegisterMetaType<Frame>("Frame");
 
     MainWindow w;

@@ -68,6 +68,8 @@ signals:
 
     void sigSaveEnvData(double temp, double hum);
     void sigSaveEventLog(const QString &type, const QString &desc);
+    void sigQueryDbHistory(const QDateTime& start, const QDateTime& end); //->db
+    void sigDbHistoryReady(const QList<HistoryData>& dataList); //->UI
 
 private:
     QTimer *timer = nullptr;        //心跳定时器

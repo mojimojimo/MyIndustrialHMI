@@ -6,9 +6,11 @@
 #include <QSqlQuery>//执行者
 
 struct HistoryData{
-    qint64 timestamp;
-    double value;
+    QString timestamp;
+    double temperature;
+    double humidity;
 };
+Q_DECLARE_METATYPE(QList<HistoryData>)
 
 class DatabaseManager : public QObject
 {
@@ -22,13 +24,13 @@ public:
     ~DatabaseManager();
     bool init();
 
-    //QList<HistoryData> queryHistory(const QDateTime &start,const QDateTime& end);
-
 public slots:
     void onInsertEnvData(double temp, double hum);
     void onInsertEvent(const QString &type, const QString &desc);
+    void onQueryHistory(const QDateTime &start,const QDateTime& end);
 
 signals:
+    void sigHistoryDataReady(const QList<HistoryData>& dataList);
 
 private:
     QSqlDatabase m_db;

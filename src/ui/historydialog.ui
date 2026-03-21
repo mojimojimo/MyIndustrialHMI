@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>503</width>
-    <height>382</height>
+    <width>566</width>
+    <height>458</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,8 +16,8 @@
   <widget class="QPushButton" name="btnQuery">
    <property name="geometry">
     <rect>
-     <x>200</x>
-     <y>350</y>
+     <x>150</x>
+     <y>380</y>
      <width>75</width>
      <height>24</height>
     </rect>
@@ -31,15 +31,15 @@
     <rect>
      <x>60</x>
      <y>90</y>
-     <width>381</width>
-     <height>231</height>
+     <width>461</width>
+     <height>271</height>
     </rect>
    </property>
   </widget>
   <widget class="QWidget" name="widget" native="true">
    <property name="geometry">
     <rect>
-     <x>110</x>
+     <x>150</x>
      <y>20</y>
      <width>251</width>
      <height>64</height>
@@ -96,6 +96,32 @@
      </spacer>
     </item>
    </layout>
+  </widget>
+  <widget class="QPushButton" name="btnExportCSV">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>380</y>
+     <width>75</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>导出CSV</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lblStatus">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>430</y>
+     <width>341</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
   </widget>
  </widget>
  <customwidgets>

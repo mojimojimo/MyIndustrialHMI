@@ -77,28 +77,29 @@ void DatabaseManager::onInsertEvent(const QString &type, const QString &desc){
     }
 }
 
-// QList<HistoryData> DatabaseManager::queryHistory(const QDateTime &start,const QDateTime& end){
-//     QList<HistoryData> list;
-//     QSqlQuery query(m_db);//"  "
-//     query.prepare("select timestamp,value from temperature_records "
-//                   "where timestamp between ? and ? order by timestamp asc");
-//     query.addBindValue(start);
-//     query.addBindValue(end);
+void DatabaseManager::onQueryHistory(const QDateTime &start,const QDateTime& end){
+    QList<HistoryData> list;
+    QSqlQuery query(m_db);//"  "
 
-//     if(query.exec()){
-//         while(query.next()){
-//             HistoryData data;
-//             QDateTime dt = query.value(0).toDateTime();
-//             data.timestamp = dt.toMSecsSinceEpoch();
-//             data.value = query.value(1).toDouble();
-//             list.append(data);
-//         }
+    query.prepare("SELECT timestamp, temperature, humidity FROM env_history "
+                  "WHERE datetime(timestamp, 'localtime') BETWEEN :start AND :end ORDER BY timestamp ASC");
+    query.bindValue(":start", start.toString("yyyy-MM-dd HH:mm:ss"));
+    query.bindValue(":end", end.toString("yyyy-MM-dd HH:mm:ss"));
 
-//     }else{
-//         qDebug()<<"Query history error:"<<query.lastError();
-//     }
-//     return list;
-// }
+    if (query.exec()) {
+        while (query.next()) {
+            HistoryData data;
+            data.timestamp = query.value(0).toString();
+            data.temperature = query.value(1).toDouble();
+            data.humidity = query.value(2).toDouble();
+            list.append(data);
+        }
+    } else {
+        qWarning() << "查询历史记录失败:" << query.lastError();
+    }
+
+    emit sigHistoryDataReady(list);
+}
 
 DatabaseManager::~DatabaseManager()
 {

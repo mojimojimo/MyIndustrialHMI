@@ -90,14 +90,22 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->btnHistory,&QPushButton::clicked,[=](){
-        HistoryDialog dlg(this);
-        dlg.exec(); // 模态显示
+        // HistoryDialog dlg(this);
+        // dlg.exec(); // 模态显示
+        HistoryDialog* dialog = new HistoryDialog(this);
+        //查询
+        connect(dialog, &HistoryDialog::sigRequestHistory, device, &DeviceManager::sigQueryDbHistory);
+        //接收
+        connect(device, &DeviceManager::sigDbHistoryReady, dialog, &HistoryDialog::onReceiveHistoryData);
+
+        dialog->setAttribute(Qt::WA_DeleteOnClose); // 关掉窗口自动销毁内存
+        dialog->show();
     });
 
     refreshTimer = new QTimer(this);
     connect(refreshTimer,&QTimer::timeout,this,[=](){
 
-        //if(device未连接) return;
+       // if(device->state != DeviceState::Connected) return;
 
         DeviceData curData = device->getLatestData();
 
