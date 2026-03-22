@@ -11,14 +11,15 @@ public:
     virtual ~CommWorker(){} //虚析构函数
 
 public slots:
-    virtual void open(QString target,int portOrBaud) = 0;//<-UI 纯虚函数
-    virtual void close() = 0;//<-UI
+    virtual void open(QString target,int portOrBaud) = 0;// <-device 纯虚函数
+    virtual void close() = 0; // <-device
     virtual void sendData(const QByteArray &data) = 0;//<-Parser
 
 signals:
-    void StatusChanged(bool isOpen);//->UI
-    void errorOccurred(QString errorMsg);//->UI
+    void StatusChanged(bool isOpen); //->device
+    //void errorOccurred(QString errorMsg); //->device
     void rawDataReceived(const QByteArray &rawdata);//->Parser
+    void logComm(const QString& level, const QString& message);// ->device
 
 };
 

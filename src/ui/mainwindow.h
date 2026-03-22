@@ -22,7 +22,7 @@ public slots:
     // 接收子线程的反馈
     void onStatusChanged(bool isOpen);
     void onDataReceived(const DeviceData &data);//<-Device改！！！
-    void writeLog(const QString &text,bool isSend);
+    void writeLog(const QString& level, const QString& msg);
 
 signals:
     //void signalSendData(char funcCode, const QByteArray &dataContent);//->Device

@@ -62,7 +62,8 @@ signals:
     void packCmd(); //->Parser
     //void sendFrame(const Frame &frame);                 //->Parser
     //void dataReceived(const DeviceData &data);          //->UI
-    void logBusiness(const QString &text, bool isSend); //->UI
+    void logBusiness(const QString& level, const QString& message); //->UI
+
     void statusChanged(bool isOpen);                    //->UI
     void errorOccurred(QString errorMsg);               //->UI
 

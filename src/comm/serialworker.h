@@ -13,8 +13,8 @@ public:
 
 
 public slots:
-    void open(QString target,int portOrBaud) override;//<-UI
-    void close() override;//<-UI
+    void open(QString target,int portOrBaud) override;
+    void close() override;
     void sendData(const QByteArray &data) override;//<-Parser
 
 private slots:

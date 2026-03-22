@@ -33,20 +33,14 @@ MainWindow::MainWindow(QWidget *parent)
 
     DeviceManager *device = new DeviceManager(this);
 
-    //发送数据
-    //connect(this,&MainWindow::signalSendData,device,&DeviceManager::onSendData);
-    //接收数据，定时主动向device拉取
-    //connect(device,&DeviceManager::dataReceived,this,&MainWindow::onDataReceived);
-
     connect(device,&DeviceManager::statusChanged,this,&MainWindow::onStatusChanged);
 
     //分层日志
-    connect(device,&DeviceManager::logBusiness,this,&MainWindow::writeLog);
+    connect(device,&DeviceManager::logBusiness, this, &MainWindow::writeLog);
 
-    connect(device,&DeviceManager::errorOccurred,this,[=](QString errorMsg){//指定this
-        QMessageBox::critical(this,"错误", errorMsg);
-    });
-
+    // connect(device,&DeviceManager::errorOccurred,this,[=](QString errorMsg){//指定this
+    //     QMessageBox::critical(this,"错误", errorMsg);
+    // });
 
     connect(ui->btnOpen,&QPushButton::clicked,[=](){
         int mode = ui->modeList->currentIndex();//
@@ -186,12 +180,13 @@ void MainWindow::onStatusChanged(bool isOpen){
 
 }
 
+
 void MainWindow::onDataReceived(const DeviceData &data){
 
         // ui->lblTemp->setText(QString::number(value,'f',1) + " ℃ ");
         // ui->lcdTemp->display(QString::number(data.actualTemperature,'f',1));
-         QString cleanLog = QString("解析成功：温度 = %1 ℃").arg(data.actualTemperature);//业务日志 (Text View)
-         writeLog(cleanLog, false);
+        //QString cleanLog = QString("解析成功：温度 = %1 ℃").arg(data.actualTemperature);//业务日志 (Text View)
+        //writeLog(cleanLog, false);
 
     // 获取当前时间戳 (秒)
     double key = QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0;
@@ -223,15 +218,38 @@ void MainWindow::refreshPorts(){
 
 }
 
+void MainWindow::writeLog(const QString& level, const QString& msg){
 
-
-void MainWindow::writeLog(const QString &text,bool isSend){
-    //获取时间戳
     QString timeStr = QDateTime::currentDateTime().toString("[HH:mm:ss.zzz]");
-    //收发标志
-    QString direction = isSend? "[TX]->":"[RX]<-";
-    QString finalLog = timeStr + direction + text;
-    ui->txtLog->appendPlainText(finalLog);
+
+    // 分级日志
+    QString htmlLog;
+    if (level == "DEBUG") {
+        if(!ui->chkHexDisplay->isChecked()) return;
+        htmlLog = QString("<font color='gray'>%1 [%2] %3</b></font>").arg(timeStr, level, msg);
+    }
+    else if (level == "INFO") {
+        htmlLog = QString("<font color='green'>%1 [%2] %3</font>").arg(timeStr, level, msg);
+    }
+    else if (level == "WARNING") {
+        htmlLog = QString("<font color='orange'><b>%1 [%2] %3</b></font>").arg(timeStr, level, msg);
+    }
+    else if (level == "ERROR") {
+        htmlLog = QString("<font color='red'><b>%1 [%2] %3</b></font>").arg(timeStr, level, msg);
+    }
+
+    // 追加到QTextBrowser中
+    ui->txtLog->insertHtml(htmlLog + "<br>"); // <br>实现换行
+    ui->txtLog->ensureCursorVisible();
+
+    // 追加后检查行数，超过1000行则删除首行
+    QTextDocument* doc = ui->txtLog->document();
+    if (doc->blockCount() > 1000) {
+        QTextCursor cursor(doc->findBlockByLineNumber(0));
+        cursor.select(QTextCursor::BlockUnderCursor);
+        cursor.removeSelectedText();
+        cursor.deleteChar(); // 删除换行符
+    }
 }
 
 void MainWindow::initChart(){

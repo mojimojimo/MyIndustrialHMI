@@ -22,7 +22,7 @@ signals:
     void RealtimeDataParsed(const DeviceData &data);//->Device 实时数据
     void configParamLoaded(const ConfigData &data); //->Device 参数配置
     void cmdAckReceived(bool ack, quint8 result);   //->Device 应答
-    void logProtocol(const QString &text,bool isSend);//->UI
+    void logProtocol(const QString& level, const QString& message); //->Device
 
 private:
 

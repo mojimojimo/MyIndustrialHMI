@@ -28,6 +28,7 @@ void ProtocolParser::processRawData(){
         //2.datalen校验
         if(datalen > PROTOCOL_MAX_DATALEN){
             qDebug()<<"【错误】数据长度非法（超过协议最大值"<<PROTOCOL_MAX_DATALEN<<"）";
+            emit logProtocol("DEBUG", "数据长度非法（超过协议最大值）");
             //m_buffer.remove(0,2); // 移除非法帧头，避免死循环
             m_readIndex+=2;
             continue;
@@ -37,6 +38,7 @@ void ProtocolParser::processRawData(){
         int packetSize = 2 + 1 + 1 + datalen + 1 + 1;
         if(m_buffer.size()-m_readIndex<packetSize){
             qDebug()<<"断包";
+            emit logProtocol("DEBUG", "断包");
             break;
         }
 
@@ -48,6 +50,7 @@ void ProtocolParser::processRawData(){
         //4.帧尾校验：完整帧格式
         if(packet.at(packetSize-1) != static_cast<char>(FRAME_TAIL)){
             qDebug()<<"【错误包】帧尾校验失败";
+            emit logProtocol("DEBUG", "帧尾校验失败");
             //m_buffer.remove(0,1);//防止丢掉一部分真数据
             m_readIndex++;
             continue;
@@ -68,6 +71,7 @@ void ProtocolParser::processRawData(){
 
         } else {
             qDebug() << "校验失败！计算值:" << calSum << " 接收值:" << revSum;
+            emit logProtocol("DEBUG", "校验码不符");
         }
 
         //删除已解析数据或丢弃整包
@@ -203,11 +207,12 @@ void ProtocolParser::buildPacket(const Frame &frame){//应用层封包
     packet.append(sum);
     packet.append(static_cast<char>(FRAME_TAIL));
     emit sendRawData(packet);
-    emit logProtocol(packet.toHex(' ').toUpper(),true);
+    emit logProtocol("DEBUG", "[TX] " + packet.toHex(' ').toUpper());
 }
 
 void ProtocolParser::onRawDataReceived(const QByteArray &rawdata){
     m_buffer.append(rawdata);
     processRawData();
+    emit logProtocol("DEBUG", "[RX] " + rawdata.toHex(' ').toUpper());
 }
 

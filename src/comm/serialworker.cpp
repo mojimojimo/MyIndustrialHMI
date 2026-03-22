@@ -37,13 +37,12 @@ void SerialWorker::open(QString target, int portOrBaud){
 
     //打开串口
     if(serial->open(QIODevice::ReadWrite)){
-        qDebug() << "串口打开成功：COM1";
+        emit logComm("INFO", "串口打开成功");
         emit StatusChanged(true);
     } else {
-        emit errorOccurred(serial->errorString());
+        //emit errorOccurred(serial->errorString());
+        emit logComm("ERROR", QString("串口打开失败：%1").arg(serial->errorString()));
         emit StatusChanged(false);
-        qDebug() << "串口打开失败："<<serial->errorString();
-
     }
 }
 
@@ -51,6 +50,7 @@ void SerialWorker::close(){
 
     serial->close();
     emit StatusChanged(false);
+    emit logComm("INFO", "串口已关闭");
 }
 
 void SerialWorker::sendData(const QByteArray &data){
@@ -91,6 +91,7 @@ void SerialWorker::handleError(QSerialPort::SerialPortError error){
             serial->close();
         }
         emit StatusChanged(false);
-        emit errorOccurred(errorStr);
+        //emit errorOccurred(errorStr);
+        emit logComm("ERROR", errorStr);
     }
 }

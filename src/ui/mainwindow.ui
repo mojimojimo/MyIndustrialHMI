@@ -343,13 +343,13 @@ border: 1px solid #666;</string>
       <string>显示原始Hex</string>
      </property>
     </widget>
-    <widget class="QPlainTextEdit" name="txtLog">
+    <widget class="QTextBrowser" name="txtLog">
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>40</y>
-       <width>791</width>
-       <height>191</height>
+       <y>31</y>
+       <width>711</width>
+       <height>211</height>
       </rect>
      </property>
     </widget>
