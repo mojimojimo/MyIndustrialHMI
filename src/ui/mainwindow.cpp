@@ -19,7 +19,9 @@ MainWindow::MainWindow(QWidget *parent)
     initChart();
     ui->targetTemp->setDecimals(1);
     ui->targetTemp->setRange(-20.0,100.0);
-    ui->btnSetTemp->setEnabled(false); // 默认不可点，直到连接成功
+    ui->btnReadParam->setEnabled(false);
+    ui->btnWriteParam->setEnabled(false); // 默认不可点，直到连接成功
+    ui->tabWidget->setCurrentIndex(0);
 
     //全局状态栏
     lblCommStatus = new QLabel("⚫ 未连接", this);//
@@ -101,7 +103,7 @@ MainWindow::MainWindow(QWidget *parent)
         device->requestClose();
     });
 
-    connect(ui->btnSetTemp,&QPushButton::clicked,[=](){//...
+    connect(ui->btnWriteParam,&QPushButton::clicked,[=](){//...
         // double val = ui->targetTemp->value();
         // short sendVal = static_cast<short>(val*10);//定点数传输
         // QByteArray data;
@@ -225,10 +227,8 @@ void MainWindow::onStatusChanged(DeviceState state){
 
     switch (state) {
     case DeviceState::Disconnected:
-        // ui->lblConnStatus->setText("未连接");
-        // ui->lblConnStatus->setStyleSheet("color: red; font-weight: bold;");
         ui->lblStatus->setText("未连接");
-        ui->lblStatus->setStyleSheet("color: red;");
+        ui->lblStatus->setStyleSheet("color: red; font-weight: bold;");
         ui->lblLight->setStyleSheet(R"(QLabel {
                     min-width: 16px;
                     min-height: 16px;
@@ -247,7 +247,8 @@ void MainWindow::onStatusChanged(DeviceState state){
 
         ui->btnOpen->setEnabled(true);
         ui->btnClose->setEnabled(false);
-        ui->btnSetTemp->setEnabled(false);
+        ui->btnReadParam->setEnabled(false);
+        ui->btnWriteParam->setEnabled(false);
         refreshTimer->stop();
         break;
 
@@ -263,10 +264,8 @@ void MainWindow::onStatusChanged(DeviceState state){
         break;
 
     case DeviceState::Connected:
-        // ui->lblConnStatus->setText("已连接");
-        // ui->lblConnStatus->setStyleSheet("color: green; font-weight: bold;");
         ui->lblStatus->setText("已连接");
-        ui->lblStatus->setStyleSheet("color: green;");
+        ui->lblStatus->setStyleSheet("color: green; font-weight: bold;");
         ui->lblLight->setStyleSheet(R"(QLabel {
                     min-width: 16px;
                     min-height: 16px;
@@ -281,47 +280,18 @@ void MainWindow::onStatusChanged(DeviceState state){
 
         ui->btnOpen->setEnabled(false);
         ui->btnClose->setEnabled(true);
-        ui->btnSetTemp->setEnabled(true);
+        ui->btnReadParam->setEnabled(true);
+        ui->btnWriteParam->setEnabled(true);
         refreshTimer->start();
         break;
 
     case DeviceState::Error:
-        // ui->lblConnStatus->setText("设备异常");
-        // ui->lblConnStatus->setStyleSheet("color: darkred; background-color: yellow;");
-        lblCommStatus->setText("🔴 设备异常 (最大重试次数已满)");//
+        ui->lblStatus->setText("设备异常");
+        ui->lblStatus->setStyleSheet("color: darkred; background-color: yellow;");
+        lblCommStatus->setText("🔴 设备异常");//
         break;
+
     }
-
-
-    // if(state){
-    //     ui->lblStatus->setText("已连接");
-    //     ui->lblStatus->setStyleSheet("color: green;");
-    //     ui->lblLight->setStyleSheet(R"(QLabel {
-    //         min-width: 16px;
-    //         min-height: 16px;
-    //         max-width: 16px;
-    //         max-height: 16px;
-    //         background-color: green;
-    //         border-radius: 8px;
-    //         border: 1px solid #666;
-    //     })");
-
-
-    // }else{
-    //     ui->lblStatus->setText("未连接");
-    //     ui->lblStatus->setStyleSheet("color: red;");
-    //     ui->lblLight->setStyleSheet(R"(QLabel {
-    //         min-width: 16px;
-    //         min-height: 16px;
-    //         max-width: 16px;
-    //         max-height: 16px;
-    //         background-color: red;
-    //         border-radius: 8px;
-    //         border: 1px solid #666;
-    //     })");
-
-    // }
-
 }
 
 // void MainWindow::updateRealTimeUI(const DeviceData &data){

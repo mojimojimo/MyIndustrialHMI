@@ -28,10 +28,15 @@ DeviceManager::DeviceManager(QObject *parent)
     connect(timeoutTimer,&QTimer::timeout,this,[=](){
         if(!responseTimer.isValid()) return;
         if(responseTimer.elapsed() > 2000){
-            setState(DeviceState::Reconnecting);
+            if(state == DeviceState::Connecting){ // 下位机未启动
+                setState(DeviceState::Error);
+                return;
+            }
+            setState(DeviceState::Reconnecting); // 下位机断连
             retryCount++;
             emit logBusiness("WARNING", QString("检测到超时！正在重连...%1/5...").arg(retryCount));
-            if(retryCount>5){
+            //requestOpen();
+            if(retryCount>4){
                 setState(DeviceState::Error);
             }
         }
@@ -109,8 +114,8 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
     // qDebug()<<"hum"<<newData.actualHumidity;
     // qDebug()<<"alarm"<<newData.alarmCode;
     // qDebug()<<"compress"<<newData.compressorStatus;
-    if(state == DeviceState::Reconnecting){ // 恢复连接
-        emit logBusiness("INFO", "网络波动已恢复");
+    if(state == DeviceState::Connecting || state == DeviceState::Reconnecting){ // 恢复连接
+        //emit logBusiness("INFO", "网络波动已恢复");
         setState(DeviceState::Connected);
     }
 
@@ -162,6 +167,12 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
 }
 
 void DeviceManager::onConfigParamLoaded(const ConfigData &data){
+
+    responseTimer.restart();// 重启定时器
+    if(state == DeviceState::Connecting || state == DeviceState::Reconnecting){ // 恢复连接
+        setState(DeviceState::Connected);
+    }
+
     QMutexLocker locker(&m_configMutex);
     QString msg = QString("修改参数配置：%1 %2 %3 %4 %5 %6")
                       .arg(data.targetTemperature)
@@ -178,6 +189,12 @@ void DeviceManager::onConfigParamLoaded(const ConfigData &data){
 }
 
 void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
+
+    responseTimer.restart();// 重启定时器
+    if(state == DeviceState::Connecting || state == DeviceState::Reconnecting){ // 恢复连接
+        setState(DeviceState::Connected);
+    }
+
     if (ack) {
         qDebug() << "底层执行成功！";
     } else {
@@ -208,7 +225,7 @@ void DeviceManager::requestCmd(){//default强制消音
 }
 
 void DeviceManager::requestOpen(int type,QString portName,int baudRate){
-    setState(DeviceState::Connecting);//成功连接才设置Connected
+    //setState(DeviceState::Connecting);//成功连接才设置Connected
     setupPipeline(type);
     emit signalOpen(portName,baudRate);
 }
@@ -239,8 +256,10 @@ void DeviceManager::setState(DeviceState newState){
         break;
 
     case DeviceState::Connecting:
-        qDebug()<<"正在连接串口...";
-        emit logBusiness("INFO", "正在连接串口...");
+        timeoutTimer->start();
+        responseTimer.start();
+        qDebug()<<"正在连接设备...";
+        emit logBusiness("INFO", "正在连接设备...");
         break;
 
     case DeviceState::Reconnecting:
@@ -252,7 +271,7 @@ void DeviceManager::setState(DeviceState newState){
         timeoutTimer->stop();//顺序
         timer->stop();
         m_dbSampleTimer->stop();
-        emit logBusiness("ERROR", "设备已离线 (最大重试次数已满)");//
+        emit logBusiness("ERROR", "设备未启动或已离线");//
         requestClose();
         break;
 
@@ -305,7 +324,7 @@ void DeviceManager::setupPipeline(int type){
     //状态链路
     connect(worker,&CommWorker::StatusChanged,this,[=](bool isOpen){
         if(isOpen){
-            setState(DeviceState::Connected);
+            setState(DeviceState::Connecting);
            // setupPipeline(type);
             //emit statusChanged(true);
         }else{
