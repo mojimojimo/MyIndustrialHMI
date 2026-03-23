@@ -67,6 +67,13 @@ DeviceManager::DeviceManager(QObject *parent)
 
 DeviceManager::~DeviceManager(){
     teardownPipeline();
+
+    if (dbThread != nullptr && dbThread->isRunning()) {//！
+        dbThread->quit();
+        dbThread->wait();
+    }
+
+    dbManager = nullptr;
 }
 
 void DeviceManager::checkSoftAlarm(double currentValue, AlarmRule& rule) {
@@ -119,8 +126,6 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
         QString logMsg = QString("冷藏箱门%1").arg(statusStr);
 
         emit logBusiness(level, logMsg); // 记录日志
-        // 通知UI
-
         emit sigSaveEventLog("DOOR_EVENT", logMsg); // 录入审计数据库
     }
     // 压缩机状态
@@ -132,9 +137,6 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
         QString logMsg = QString("压缩机%1").arg(statusStr);
 
         emit logBusiness("INFO",logMsg); // 记录日志
-        // 通知UI
-
-
         emit sigSaveEventLog("SYS_EVENT", logMsg); // 录入审计数据库
     }
     // 报警码
@@ -142,13 +144,9 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
         qWarning() << "[警报] 报警码变更！旧:" << m_latestData.alarmCode << " 新:" << newData.alarmCode;
         if(newData.alarmCode != 0){ // 产生报警
              QString logMsg = QString("触发系统级报警！故障码: %1").arg(newData.alarmCode);
-            // 通知UI
-
             emit logBusiness("ERROR", logMsg);
             emit sigSaveEventLog("ALARM", logMsg);
         } else {  // 报警解除
-            // 通知UI
-
             emit logBusiness("INFO", "系统报警已解除");
             emit sigSaveEventLog("ALARM_CLEAR", "系统报警已解除");
         }
@@ -156,7 +154,9 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
 
     // 温/湿度越界检测
     checkSoftAlarm(newData.actualTemperature, m_tempRule); // 查温度
+    m_isTempSoftAlarm = m_tempRule.isAlarming;
     checkSoftAlarm(newData.actualHumidity, m_humRule);     // 查湿度
+    m_isHumSoftAlarm = m_humRule.isAlarming;
 
     m_latestData = newData;// 连续变量：覆盖更新
 }
@@ -170,9 +170,11 @@ void DeviceManager::onConfigParamLoaded(const ConfigData &data){
                       .arg(data.targetHumidity)
                       .arg(data.humidHighLimit)
                       .arg(data.humidLowLimit);
+    m_tempRule = {"温度", "℃", data.tempHighLimit, data.tempLowLimit};
+    m_humRule = {"湿度", "%", data.humidHighLimit, data.humidLowLimit};
     qDebug()<< msg;
-    emit logBusiness("INFO", msg);
-    emit sigSaveEventLog("SYS_EVENT", msg);
+    emit logBusiness("INFO", "成功修改参数配置");
+    emit sigSaveEventLog("SYS_EVENT", "成功修改参数配置");
 }
 
 void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
@@ -206,7 +208,7 @@ void DeviceManager::requestCmd(){//default强制消音
 }
 
 void DeviceManager::requestOpen(int type,QString portName,int baudRate){
-    setState(DeviceState::Connected);
+    setState(DeviceState::Connecting);//成功连接才设置Connected
     setupPipeline(type);
     emit signalOpen(portName,baudRate);
 }
@@ -223,6 +225,7 @@ void DeviceManager::requestClose(){
 void DeviceManager::setState(DeviceState newState){
     if(state == newState) return;
     state = newState;
+    emit statusChanged(newState);
 
     switch(newState){
     case DeviceState::Connected:
@@ -258,6 +261,7 @@ void DeviceManager::setState(DeviceState newState){
         timeoutTimer->stop();
         responseTimer.invalidate();
         m_dbSampleTimer->stop();
+        emit logBusiness("INFO", "设备已离线");
         break;
 
     }
@@ -303,12 +307,12 @@ void DeviceManager::setupPipeline(int type){
         if(isOpen){
             setState(DeviceState::Connected);
            // setupPipeline(type);
-            emit statusChanged(true);
+            //emit statusChanged(true);
         }else{
 
             teardownPipeline();
             setState(DeviceState::Disconnected);
-            emit statusChanged(false);
+            //emit statusChanged(false);
         }
     });
 
@@ -336,14 +340,8 @@ void DeviceManager::teardownPipeline(){
         workThread->wait(); // 主线程等待子线程真正退出；线程结束了，不再用worker了，此时删它就安全
     }
 
-    if (dbThread != nullptr && dbThread->isRunning()) {
-        dbThread->quit();
-        dbThread->wait();
-    }
-
     // 指针置空，防止野指针
     worker = nullptr;
     parser = nullptr;
     workThread = nullptr;
-    dbManager = nullptr;
 }

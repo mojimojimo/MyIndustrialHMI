@@ -19,9 +19,9 @@ set(PROJECT_SOURCES
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h
         src/ui/mainwindow.ui
-        src/ui/historydialog.h
-        src/ui/historydialog.cpp
-        src/ui/historydialog.ui
+        src/ui/historywidget.h
+        src/ui/historywidget.cpp
+        src/ui/historywidget.ui
 
         #协议解析
         src/protocol/ProtocolData.h

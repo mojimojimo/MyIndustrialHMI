@@ -41,6 +41,8 @@ public:
         QMutexLocker locker(&m_dataMutex);
         return m_latestData;
     }
+    bool m_isTempSoftAlarm = false; // 温度是否软报警
+    bool m_isHumSoftAlarm = false;  // 湿度是否软报警
 
 public slots:
     void onRealtimeDataParsed(const DeviceData &newData);//<-Parser
@@ -64,7 +66,7 @@ signals:
     //void dataReceived(const DeviceData &data);          //->UI
     void logBusiness(const QString& level, const QString& message); //->UI
 
-    void statusChanged(bool isOpen);                    //->UI
+    void statusChanged(DeviceState state);                    //->UI
     void errorOccurred(QString errorMsg);               //->UI
 
     void sigSaveEnvData(double temp, double hum);

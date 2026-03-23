@@ -78,6 +78,7 @@ void DatabaseManager::onInsertEvent(const QString &type, const QString &desc){
 }
 
 void DatabaseManager::onQueryHistory(const QDateTime &start,const QDateTime& end){
+
     QList<HistoryData> list;
     QSqlQuery query(m_db);//"  "
 

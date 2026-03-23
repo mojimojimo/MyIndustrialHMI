@@ -1,20 +1,20 @@
-#ifndef HISTORYDIALOG_H
-#define HISTORYDIALOG_H
+#ifndef HISTORYWIDGET_H
+#define HISTORYWIDGET_H
 
-#include <QDialog>
+#include <QWidget>
 #include "databasemanager.h"
 
 namespace Ui {
-class HistoryDialog;
+class HistoryWidget;
 }
 
-class HistoryDialog : public QDialog
+class HistoryWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit HistoryDialog(QWidget *parent = nullptr);
-    ~HistoryDialog();
+    explicit HistoryWidget(QWidget *parent = nullptr);
+    ~HistoryWidget();
 
 public slots:
     void onReceiveHistoryData(const QList<HistoryData>& dataList);
@@ -27,7 +27,7 @@ signals:
     void sigRequestHistory(const QDateTime &start,const QDateTime& end);
 
 private:
-    Ui::HistoryDialog *ui;
+    Ui::HistoryWidget *ui;
     QList<HistoryData> m_curDataList;
     //void initChart();
     void initPlot();
@@ -35,4 +35,4 @@ private:
 
 };
 
-#endif // HISTORYDIALOG_H
+#endif // HISTORYWIDGET_H

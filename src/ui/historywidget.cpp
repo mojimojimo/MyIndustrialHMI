@@ -1,10 +1,10 @@
-#include "historydialog.h"
-#include "ui_historydialog.h"
+#include "HistoryWidget.h"
+#include "ui_HistoryWidget.h"
 #include "qcustomplot.h"
 
-HistoryDialog::HistoryDialog(QWidget *parent)
-    : QDialog(parent)
-    , ui(new Ui::HistoryDialog)
+HistoryWidget::HistoryWidget(QWidget *parent)
+    : QWidget(parent)
+    , ui(new Ui::HistoryWidget)
 {
     ui->setupUi(this);
 
@@ -17,12 +17,12 @@ HistoryDialog::HistoryDialog(QWidget *parent)
     initPlot();
 }
 
-HistoryDialog::~HistoryDialog()
+HistoryWidget::~HistoryWidget()
 {
     delete ui;
 }
 
-// void HistoryDialog::initChart(){
+// void HistoryWidget::initChart(){
 //     ui->plotHistory->addGraph();
 //     ui->plotHistory->graph(0)->setPen(QPen(Qt::blue));
 
@@ -39,7 +39,7 @@ HistoryDialog::~HistoryDialog()
 //     ui->plotHistory->xAxis->setTickLabelRotation(30);
 // }
 
-void HistoryDialog::initPlot() {
+void HistoryWidget::initPlot() {
     // 添加温度曲线
     ui->plotHistory->addGraph();
     ui->plotHistory->graph(0)->setPen(QPen(Qt::red, 2)); // 红色，线宽 2
@@ -67,7 +67,7 @@ void HistoryDialog::initPlot() {
     ui->plotHistory->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
 }
 
-void HistoryDialog::updatePlot(const QList<HistoryData>& dataList) {
+void HistoryWidget::updatePlot(const QList<HistoryData>& dataList) {
     // 无数据清空图表
     if (dataList.isEmpty()) {
         ui->plotHistory->graph(0)->data()->clear();
@@ -100,7 +100,7 @@ void HistoryDialog::updatePlot(const QList<HistoryData>& dataList) {
     ui->plotHistory->replot();
 }
 
-void HistoryDialog::on_btnQuery_clicked() {
+void HistoryWidget::on_btnQuery_clicked() {
     QDateTime start = ui->dtStart->dateTime();
     QDateTime end = ui->dtEnd->dateTime();
 
@@ -111,7 +111,7 @@ void HistoryDialog::on_btnQuery_clicked() {
     emit sigRequestHistory(start, end);
 }
 
-void HistoryDialog::onReceiveHistoryData(const QList<HistoryData>& dataList) {
+void HistoryWidget::onReceiveHistoryData(const QList<HistoryData>& dataList) {
     // 恢复 UI 状态
     ui->btnQuery->setEnabled(true);
     ui->lblStatus->setText(QString("查询完成，共找到 %1 条记录。").arg(dataList.size()));
@@ -126,7 +126,7 @@ void HistoryDialog::onReceiveHistoryData(const QList<HistoryData>& dataList) {
     updatePlot(dataList);
 }
 
-void HistoryDialog::on_btnExportCSV_clicked()
+void HistoryWidget::on_btnExportCSV_clicked()
 {
     if (m_curDataList.isEmpty()) {
         QMessageBox::warning(this, "提示", "当前没有可导出的数据，请先查询！");
