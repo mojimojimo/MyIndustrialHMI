@@ -173,19 +173,20 @@ void DeviceManager::onConfigParamLoaded(const ConfigData &data){
         setState(DeviceState::Connected);
     }
 
-    QMutexLocker locker(&m_configMutex);
-    QString msg = QString("修改参数配置：%1 %2 %3 %4 %5 %6")
-                      .arg(data.targetTemperature)
-                      .arg(data.tempHighLimit)
-                      .arg(data.tempLowLimit)
-                      .arg(data.targetHumidity)
-                      .arg(data.humidHighLimit)
-                      .arg(data.humidLowLimit);
-    m_tempRule = {"温度", "℃", data.tempHighLimit, data.tempLowLimit};
-    m_humRule = {"湿度", "%", data.humidHighLimit, data.humidLowLimit};
-    qDebug()<< msg;
-    emit logBusiness("INFO", "成功修改参数配置");
-    emit sigSaveEventLog("SYS_EVENT", "成功修改参数配置");
+    // QMutexLocker locker(&m_configMutex);
+    // QString msg = QString("修改参数配置：%1 %2 %3 %4 %5 %6")//
+    //                   .arg(data.targetTemperature)
+    //                   .arg(data.tempHighLimit)
+    //                   .arg(data.tempLowLimit)
+    //                   .arg(data.targetHumidity)
+    //                   .arg(data.humidHighLimit)
+    //                   .arg(data.humidLowLimit);
+    // m_tempRule = {"温度", "℃", data.tempHighLimit, data.tempLowLimit};
+    // m_humRule = {"湿度", "%", data.humidHighLimit, data.humidLowLimit};
+    // qDebug()<< msg;
+    emit configReturned(data);
+    //emit logBusiness("INFO", "成功修改参数配置");
+    //emit sigSaveEventLog("SYS_EVENT", "成功修改参数配置");
 }
 
 void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
@@ -197,6 +198,7 @@ void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
 
     if (ack) {
         qDebug() << "底层执行成功！";
+        emit logBusiness("INFO", "指令执行成功");
     } else {
         QString msg = QString("设置失败，底层拒绝执行，错误码: %1").arg(errorCode);
         emit logBusiness("ERROR", msg);
@@ -211,17 +213,30 @@ void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
 // }
 
 void DeviceManager::requestReadParam(){
-    QMutexLocker locker(&m_configMutex);
+    //QMutexLocker locker(&m_configMutex);
+    qDebug()<<"读取参数指令下发";
     emit packReadParam();
 }
 
-void DeviceManager::requestWriteParam(const ConfigData &config){
-    QMutexLocker locker(&m_configMutex);
-    emit packWriteParam(config);
+void DeviceManager::requestWriteParam(const ConfigData &data){
+    //QMutexLocker locker(&m_configMutex);
+    QString msg = QString("修改参数配置：%1 %2 %3 %4 %5 %6")//
+                      .arg(data.targetTemperature)
+                      .arg(data.tempHighLimit)
+                      .arg(data.tempLowLimit)
+                      .arg(data.targetHumidity)
+                      .arg(data.humidHighLimit)
+                      .arg(data.humidLowLimit);
+    m_tempRule = {"温度", "℃", data.tempHighLimit, data.tempLowLimit};
+    m_humRule = {"湿度", "%", data.humidHighLimit, data.humidLowLimit};
+    qDebug()<< msg;
+    emit packWriteParam(data);
+    emit logBusiness("INFO", "成功修改参数配置");// 其实应该等到下位机响应才记录日志和审计表
+    emit sigSaveEventLog("SYS_EVENT", "成功修改参数配置");
 }
 
-void DeviceManager::requestCmd(){//default强制消音
-    emit packCmd();
+void DeviceManager::requestCmd(const QString &cmd){//default强制消音
+    emit packCmd(cmd);
 }
 
 void DeviceManager::requestOpen(int type,QString portName,int baudRate){
@@ -251,6 +266,7 @@ void DeviceManager::setState(DeviceState newState){
         responseTimer.start();
         m_dbSampleTimer->start();
         retryCount=0;//
+        requestReadParam();//每次连接都读取静默参数
         qDebug()<<"设备已在线";
         emit logBusiness("INFO", "设备已在线");
         break;
@@ -318,7 +334,7 @@ void DeviceManager::setupPipeline(int type){
     connect(worker,&CommWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
     //connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
     connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed,Qt::DirectConnection);
-    connect(parser,&ProtocolParser::configParamLoaded,this,&DeviceManager::onConfigParamLoaded,Qt::DirectConnection);
+    connect(parser,&ProtocolParser::configParamLoaded,this,&DeviceManager::onConfigParamLoaded);
     connect(parser,&ProtocolParser::cmdAckReceived,this,&DeviceManager::onCmdAckReceived);
 
     //状态链路

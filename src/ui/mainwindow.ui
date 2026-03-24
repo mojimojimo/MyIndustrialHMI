@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>796</width>
-    <height>664</height>
+    <height>714</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -200,14 +200,14 @@ QProgressBar::chunk {
       <x>160</x>
       <y>30</y>
       <width>631</width>
-      <height>721</height>
+      <height>621</height>
      </rect>
     </property>
     <property name="styleSheet">
      <string notr="true"/>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="page_5">
      <widget class="QGroupBox" name="groupBox_5">
@@ -446,10 +446,10 @@ QProgressBar::chunk {
      <widget class="QGroupBox" name="groupBox_2">
       <property name="geometry">
        <rect>
-        <x>300</x>
-        <y>200</y>
+        <x>290</x>
+        <y>340</y>
         <width>311</width>
-        <height>381</height>
+        <height>271</height>
        </rect>
       </property>
       <property name="title">
@@ -563,8 +563,8 @@ QProgressBar::chunk {
       <widget class="QPushButton" name="btnOpen">
        <property name="geometry">
         <rect>
-         <x>40</x>
-         <y>240</y>
+         <x>30</x>
+         <y>220</y>
          <width>111</width>
          <height>41</height>
         </rect>
@@ -577,7 +577,7 @@ QProgressBar::chunk {
        <property name="geometry">
         <rect>
          <x>180</x>
-         <y>240</y>
+         <y>220</y>
          <width>101</width>
          <height>41</height>
         </rect>
@@ -630,31 +630,159 @@ border: 1px solid #666;</string>
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>281</width>
-        <height>571</height>
+        <width>601</width>
+        <height>311</height>
        </rect>
       </property>
       <property name="title">
        <string>参数设置</string>
       </property>
-      <widget class="QPushButton" name="btnWriteParam">
+      <widget class="QWidget" name="widget_2" native="true">
        <property name="geometry">
         <rect>
-         <x>80</x>
-         <y>330</y>
-         <width>111</width>
-         <height>31</height>
+         <x>30</x>
+         <y>30</y>
+         <width>541</width>
+         <height>231</height>
         </rect>
        </property>
-       <property name="text">
-        <string>一键下发配置</string>
-       </property>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="6" column="0">
+         <widget class="QLabel" name="label_13">
+          <property name="text">
+           <string>湿度下限：</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_27">
+          <property name="text">
+           <string>参数名称</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_20">
+          <property name="text">
+           <string>新设定值</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLabel" name="lblcurTempll">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string>目标湿度：</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QDoubleSpinBox" name="spinNewTemphl"/>
+        </item>
+        <item row="4" column="1">
+         <widget class="QLabel" name="lblcurTarHum">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_19">
+          <property name="text">
+           <string>设备当前值</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="2">
+         <widget class="QDoubleSpinBox" name="spinNewTarHum"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>目标温度：</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="2">
+         <widget class="QDoubleSpinBox" name="spinNewTempll"/>
+        </item>
+        <item row="6" column="2">
+         <widget class="QDoubleSpinBox" name="spinNewHumll"/>
+        </item>
+        <item row="1" column="2">
+         <widget class="QDoubleSpinBox" name="spinNewTarTemp"/>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLabel" name="lblcurHumhl">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_8">
+          <property name="text">
+           <string>温度上限：</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_9">
+          <property name="text">
+           <string>温度下限：</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="2">
+         <widget class="QDoubleSpinBox" name="spinNewHumhl"/>
+        </item>
+        <item row="6" column="1">
+         <widget class="QLabel" name="lblcurHumll">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="lblcurTemphl">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="lblcurTarTemp">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="label_12">
+          <property name="text">
+           <string>湿度上限：</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QPushButton" name="btnReadParam">
        <property name="geometry">
         <rect>
-         <x>80</x>
-         <y>290</y>
+         <x>190</x>
+         <y>270</y>
          <width>111</width>
          <height>31</height>
         </rect>
@@ -663,162 +791,37 @@ border: 1px solid #666;</string>
         <string>读取参数</string>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="targetTemp_4">
+      <widget class="QPushButton" name="btnWriteParam">
        <property name="geometry">
         <rect>
-         <x>140</x>
-         <y>110</y>
-         <width>91</width>
+         <x>420</x>
+         <y>270</y>
+         <width>111</width>
          <height>31</height>
         </rect>
        </property>
-      </widget>
-      <widget class="QDoubleSpinBox" name="targetTemp_5">
-       <property name="geometry">
-        <rect>
-         <x>140</x>
-         <y>190</y>
-         <width>91</width>
-         <height>31</height>
-        </rect>
-       </property>
-      </widget>
-      <widget class="QDoubleSpinBox" name="targetTemp_6">
-       <property name="geometry">
-        <rect>
-         <x>140</x>
-         <y>150</y>
-         <width>91</width>
-         <height>31</height>
-        </rect>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_8">
-       <property name="geometry">
-        <rect>
-         <x>40</x>
-         <y>80</y>
-         <width>60</width>
-         <height>16</height>
-        </rect>
-       </property>
        <property name="text">
-        <string>温度上限：</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_9">
-       <property name="geometry">
-        <rect>
-         <x>40</x>
-         <y>120</y>
-         <width>60</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>温度下限：</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_12">
-       <property name="geometry">
-        <rect>
-         <x>50</x>
-         <y>200</y>
-         <width>60</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>湿度上限：</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_13">
-       <property name="geometry">
-        <rect>
-         <x>40</x>
-         <y>230</y>
-         <width>60</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>湿度下限：</string>
-       </property>
-      </widget>
-      <widget class="QDoubleSpinBox" name="targetTemp_7">
-       <property name="geometry">
-        <rect>
-         <x>140</x>
-         <y>230</y>
-         <width>91</width>
-         <height>31</height>
-        </rect>
-       </property>
-      </widget>
-      <widget class="QDoubleSpinBox" name="targetTemp">
-       <property name="geometry">
-        <rect>
-         <x>134</x>
-         <y>25</y>
-         <width>91</width>
-         <height>31</height>
-        </rect>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label">
-       <property name="geometry">
-        <rect>
-         <x>40</x>
-         <y>30</y>
-         <width>60</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>目标温度：</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_7">
-       <property name="geometry">
-        <rect>
-         <x>40</x>
-         <y>170</y>
-         <width>60</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>目标湿度：</string>
-       </property>
-      </widget>
-      <widget class="QDoubleSpinBox" name="targetTemp_3">
-       <property name="geometry">
-        <rect>
-         <x>130</x>
-         <y>70</y>
-         <width>91</width>
-         <height>31</height>
-        </rect>
+        <string>一键下发配置</string>
        </property>
       </widget>
      </widget>
      <widget class="QGroupBox" name="groupBox_6">
       <property name="geometry">
        <rect>
-        <x>300</x>
-        <y>10</y>
-        <width>311</width>
-        <height>191</height>
+        <x>10</x>
+        <y>340</y>
+        <width>271</width>
+        <height>261</height>
        </rect>
       </property>
       <property name="title">
        <string>指令下发</string>
       </property>
-      <widget class="QPushButton" name="pushButton">
+      <widget class="QPushButton" name="btnSilence">
        <property name="geometry">
         <rect>
-         <x>90</x>
-         <y>30</y>
+         <x>80</x>
+         <y>120</y>
          <width>111</width>
          <height>31</height>
         </rect>
@@ -827,11 +830,11 @@ border: 1px solid #666;</string>
         <string>远程消音</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="pushButton_2">
+      <widget class="QPushButton" name="btnDefrost">
        <property name="geometry">
         <rect>
-         <x>90</x>
-         <y>80</y>
+         <x>70</x>
+         <y>190</y>
          <width>121</width>
          <height>31</height>
         </rect>

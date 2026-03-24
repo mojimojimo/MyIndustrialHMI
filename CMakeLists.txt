@@ -103,7 +103,7 @@ target_link_libraries(MyIndustrialHMI PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt$
 # 启用单元测试
 enable_testing()
 # 添加tests子目录
-#add_subdirectory(tests)
+add_subdirectory(tests)
 
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

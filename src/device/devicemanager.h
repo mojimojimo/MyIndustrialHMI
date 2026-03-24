@@ -50,8 +50,8 @@ public slots:
     void onCmdAckReceived(bool ack, quint8 errorCode); //<-Parser
     //void onSendData(char funcCode, const QByteArray &dataContent); //<-UI
     void requestReadParam(); //<-UI
-    void requestWriteParam(const ConfigData &config); //<-UI
-    void requestCmd(); //<-UI
+    void requestWriteParam(const ConfigData &data); //<-UI
+    void requestCmd(const QString &cmd); //<-UI
     void requestOpen(int type,QString portName,int baudRate);      //<-UI
     void requestClose();                                           //<-UI
     //void setAlarmThresholds(double lower, double upper, bool isTemp);   //<-UI
@@ -61,9 +61,10 @@ signals:
     void signalClose();                                 //->worker
     void packReadParam(); //->Parser
     void packWriteParam(const ConfigData &config); //->Parser
-    void packCmd(); //->Parser
+    void packCmd(const QString &cmd); //->Parser
     //void sendFrame(const Frame &frame);                 //->Parser
     //void dataReceived(const DeviceData &data);          //->UI
+    void configReturned(const ConfigData &config);
     void logBusiness(const QString& level, const QString& message); //->UI
 
     void statusChanged(DeviceState state);                    //->UI

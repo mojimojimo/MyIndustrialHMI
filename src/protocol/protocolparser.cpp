@@ -149,6 +149,8 @@ void ProtocolParser::processFrame(const Frame &frame) {
         bool ack = (result == 0x00);
 
         emit cmdAckReceived(ack, result);
+    } else {
+        qDebug()<<"功能码错误！";
     }
 }
 
@@ -177,10 +179,10 @@ void ProtocolParser::onPackWriteParam(const ConfigData &config){
     buildPacket(frame);
 }
 
-void ProtocolParser::onPackCmd(){
+void ProtocolParser::onPackCmd(const QString &cmd){
     Frame frame;
     frame.funcCode = FUNC_CTRL_CMD;
-    frame.payload = QByteArray::fromHex("01");//
+    frame.payload = QByteArray::fromHex(cmd.toUtf8());//
     buildPacket(frame);
 }
 

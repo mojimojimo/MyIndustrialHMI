@@ -15,7 +15,7 @@ public slots:
     void onRawDataReceived(const QByteArray &rawdata);
     void onPackReadParam();
     void onPackWriteParam(const ConfigData &config);
-    void onPackCmd();
+    void onPackCmd(const QString &cmd);
 
 signals:
     void sendRawData(const QByteArray &rawdata);//->Serial

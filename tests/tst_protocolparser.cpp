@@ -1,267 +1,279 @@
 #include <QtTest>
+#include <QSignalSpy>
+
 #include "protocolparser.h"
 
-/*
- * 测试目标 = 验证 ProtocolParser 在收到合法数据时是否能够正确解析并发出 frameReceived 信号
-*/
+static void appendU16BE(QByteArray &ba, quint16 value)
+{
+    ba.append(static_cast<char>((value >> 8) & 0xFF));
+    ba.append(static_cast<char>(value & 0xFF));
+}
+
+static void appendS16BE(QByteArray &ba, qint16 value)
+{
+    appendU16BE(ba, static_cast<quint16>(value));
+}
+
+static QByteArray buildPacket(quint8 funcCode, const QByteArray &payload)
+{
+    QByteArray packet;
+    packet.append(static_cast<char>(FRAME_HEAD_1));
+    packet.append(static_cast<char>(FRAME_HEAD_2));
+    packet.append(static_cast<char>(funcCode));
+    packet.append(static_cast<char>(payload.size()));
+    packet.append(payload);
+
+    quint8 sum = 0;
+    for (int i = 2; i < packet.size(); ++i) {
+        sum = static_cast<quint8>(sum + static_cast<quint8>(packet.at(i)));
+    }
+
+    packet.append(static_cast<char>(sum));
+    packet.append(static_cast<char>(FRAME_TAIL));
+    return packet;
+}
+
+static QByteArray buildRealtimePayload(double temp, double hum,
+                                       quint8 door, quint8 compressor, quint8 alarm)
+{
+    QByteArray payload;
+    appendS16BE(payload, static_cast<qint16>(temp * 10.0));
+    appendU16BE(payload, static_cast<quint16>(hum * 10.0));
+    payload.append(static_cast<char>(door));
+    payload.append(static_cast<char>(compressor));
+    payload.append(static_cast<char>(alarm));
+    return payload;
+}
+
+static QByteArray buildConfigPayload(double targetTemperature,
+                                     double tempHighLimit,
+                                     double tempLowLimit,
+                                     double targetHumidity,
+                                     double humidHighLimit,
+                                     double humidLowLimit)
+{
+    QByteArray payload;
+    appendS16BE(payload, static_cast<qint16>(targetTemperature * 10.0));
+    appendS16BE(payload, static_cast<qint16>(tempHighLimit * 10.0));
+    appendS16BE(payload, static_cast<qint16>(tempLowLimit * 10.0));
+    appendU16BE(payload, static_cast<quint16>(targetHumidity * 10.0));
+    appendU16BE(payload, static_cast<quint16>(humidHighLimit * 10.0));
+    appendU16BE(payload, static_cast<quint16>(humidLowLimit * 10.0));
+    return payload;
+}
 
 class TestProtocolParser : public QObject
 {
     Q_OBJECT
 
 private slots:
-
     void initTestCase();
 
-    void test_validFrame();
-    void test_checksumError();
-    void test_tailError();
+    void test_realtimeDataParsed();
+    void test_configParamLoaded();
+    void test_cmdAckReceived();
+
     void test_halfPacket();
     void test_stickyPackets();
     void test_noiseBeforeFrame();
-    void test_maxPayload();
-    void test_illegalLength();
+
+    void test_onPackReadParam();
+    void test_onPackWriteParam();
+    void test_onPackCmd();
 };
 
 void TestProtocolParser::initTestCase()
 {
-    qRegisterMetaType<Frame>("Frame");//注册元类型Frame
+    qRegisterMetaType<DeviceData>("DeviceData");
+    qRegisterMetaType<ConfigData>("ConfigData");
 }
 
-// 测试1：合法帧解析
-void TestProtocolParser::test_validFrame()
+void TestProtocolParser::test_realtimeDataParsed()
 {
     ProtocolParser parser;
-    QSignalSpy spy(&parser, &ProtocolParser::frameReceived);
+    QSignalSpy spy(&parser, &ProtocolParser::RealtimeDataParsed);
 
-    //封包
-    QByteArray frame;
-
-    frame.append((char)0xAA);
-    frame.append((char)0x55);
-    frame.append((char)FUNC_TEMP_DATA);
-    frame.append((char)2);
-    frame.append((char)0x11);
-    frame.append((char)0x22);
-
-    unsigned char sum = FUNC_TEMP_DATA + 2 + 0x11 + 0x22;
-
-    frame.append(sum);
-    frame.append((char)0xFF);
-
-    //解析数据 processData()
-    parser.onRawDataReceived(frame);
-
-    QCOMPARE(spy.count(), 1); //验证发出 frameReceived 信号
-
-    //验证参数是否正确
-    QList<QVariant> arguments = spy.takeFirst();
-    Frame received = qvariant_cast<Frame>(arguments.at(0));
-
-    QCOMPARE(received.funcCode, (quint8)FUNC_TEMP_DATA);
-    QCOMPARE(received.payload.size(), 2);
-}
-
-// 测试2：校验和错误
-void TestProtocolParser::test_checksumError()
-{
-    ProtocolParser parser;
-
-    QSignalSpy spy(&parser, &ProtocolParser::frameReceived);
-
-    QByteArray frame;
-
-    frame.append((char)0xAA);
-    frame.append((char)0x55);
-    frame.append((char)FUNC_TEMP_DATA);
-    frame.append((char)1);
-    frame.append((char)0x33);
-
-    frame.append((char)0x00);   // 错误校验
-    frame.append((char)0xFF);
+    QByteArray payload = buildRealtimePayload(25.3, 56.7, 1, 0, 2);
+    QByteArray frame = buildPacket(FUNC_REPORT_ALL_DATA, payload);
 
     parser.onRawDataReceived(frame);
 
-    QCOMPARE(spy.count(), 0);
+    QCOMPARE(spy.count(), 1);
+
+    const QList<QVariant> args = spy.takeFirst();
+    DeviceData data = qvariant_cast<DeviceData>(args.at(0));
+
+    QVERIFY(qAbs(data.actualTemperature - 25.3) < 0.0001);
+    QVERIFY(qAbs(data.actualHumidity - 56.7) < 0.0001);
+    QCOMPARE(data.doorStatus, static_cast<uint8_t>(1));
+    QCOMPARE(data.compressorStatus, static_cast<uint8_t>(0));
+    QCOMPARE(data.alarmCode, static_cast<uint8_t>(2));
 }
 
-// 测试3：帧尾错误
-void TestProtocolParser::test_tailError()
+void TestProtocolParser::test_configParamLoaded()
 {
     ProtocolParser parser;
+    QSignalSpy spy(&parser, &ProtocolParser::configParamLoaded);
 
-    QSignalSpy spy(&parser, &ProtocolParser::frameReceived);
-
-    QByteArray frame;
-
-    frame.append((char)0xAA);
-    frame.append((char)0x55);
-    frame.append((char)FUNC_TEMP_DATA);
-    frame.append((char)1);
-    frame.append((char)0x10);
-
-    unsigned char sum = FUNC_TEMP_DATA + 1 + 0x10;
-
-    frame.append(sum);
-    frame.append((char)0x00); // 错误尾
+    QByteArray payload = buildConfigPayload(2.5, 8.0, 2.0, 55.5, 70.0, 40.0);
+    QByteArray frame = buildPacket(FUNC_PARAM_RETURN, payload);
 
     parser.onRawDataReceived(frame);
 
-    QCOMPARE(spy.count(), 0);
+    QCOMPARE(spy.count(), 1);
+
+    const QList<QVariant> args = spy.takeFirst();
+    ConfigData config = qvariant_cast<ConfigData>(args.at(0));
+
+    QVERIFY(qAbs(config.targetTemperature - 2.5) < 0.0001);
+    QVERIFY(qAbs(config.tempHighLimit - 8.0) < 0.0001);
+    QVERIFY(qAbs(config.tempLowLimit - 2.0) < 0.0001);
+    QVERIFY(qAbs(config.targetHumidity - 55.5) < 0.0001);
+    QVERIFY(qAbs(config.humidHighLimit - 70.0) < 0.0001);
+    QVERIFY(qAbs(config.humidLowLimit - 40.0) < 0.0001);
 }
 
-// 测试4：半包
+void TestProtocolParser::test_cmdAckReceived()
+{
+    ProtocolParser parser;
+    QSignalSpy spy(&parser, &ProtocolParser::cmdAckReceived);
+
+    QByteArray payload;
+    payload.append(static_cast<char>(0x00));   // ack
+    QByteArray frame = buildPacket(FUNC_CMD_ACK, payload);
+
+    parser.onRawDataReceived(frame);
+
+    QCOMPARE(spy.count(), 1);
+
+    const QList<QVariant> args = spy.takeFirst();
+    const bool ack = args.at(0).toBool();
+    const quint8 result = static_cast<quint8>(args.at(1).toUInt());
+
+    QCOMPARE(ack, true);
+    QCOMPARE(result, static_cast<quint8>(0x00));
+}
+
 void TestProtocolParser::test_halfPacket()
 {
     ProtocolParser parser;
+    QSignalSpy spy(&parser, &ProtocolParser::RealtimeDataParsed);
 
-    QSignalSpy spy(&parser, &ProtocolParser::frameReceived);
+    QByteArray payload = buildRealtimePayload(25.3, 56.7, 1, 0, 2);
+    QByteArray frame = buildPacket(FUNC_REPORT_ALL_DATA, payload);
 
-    QByteArray part1;
-
-    part1.append((char)0xAA);
-    part1.append((char)0x55);
-    part1.append((char)FUNC_TEMP_DATA);
-    part1.append((char)1);
+    // 先喂前半包
+    QByteArray part1 = frame.left(5);
+    QByteArray part2 = frame.mid(5);
 
     parser.onRawDataReceived(part1);
-
     QCOMPARE(spy.count(), 0);
 
-    QByteArray part2;
-
-    part2.append((char)0x44);
-
-    unsigned char sum = FUNC_TEMP_DATA + 1 + 0x44;
-
-    part2.append(sum);
-    part2.append((char)0xFF);
-
     parser.onRawDataReceived(part2);
-
     QCOMPARE(spy.count(), 1);
 }
 
-// 测试5：粘包（连续两帧）
 void TestProtocolParser::test_stickyPackets()
 {
     ProtocolParser parser;
+    QSignalSpy spy(&parser, &ProtocolParser::RealtimeDataParsed);
 
-    QSignalSpy spy(&parser, &ProtocolParser::frameReceived);
+    QByteArray payload1 = buildRealtimePayload(25.3, 56.7, 1, 0, 2);
+    QByteArray payload2 = buildRealtimePayload(26.1, 57.2, 0, 1, 0);
 
-    QByteArray data;
+    QByteArray frame1 = buildPacket(FUNC_REPORT_ALL_DATA, payload1);
+    QByteArray frame2 = buildPacket(FUNC_REPORT_ALL_DATA, payload2);
 
-    for(int i=0;i<2;i++)
-    {
-        QByteArray frame;
+    QByteArray sticky = frame1 + frame2;
 
-        frame.append((char)0xAA);
-        frame.append((char)0x55);
-        frame.append((char)FUNC_TEMP_DATA);
-        frame.append((char)1);
-        frame.append((char)(0x10 + i));
-
-        unsigned char sum = FUNC_TEMP_DATA + 1 + (0x10 + i);
-
-        frame.append(sum);
-        frame.append((char)0xFF);
-
-        data.append(frame);
-    }
-
-    parser.onRawDataReceived(data);
+    parser.onRawDataReceived(sticky);
 
     QCOMPARE(spy.count(), 2);
 }
 
-
-// 测试6：脏数据 + 合法帧
 void TestProtocolParser::test_noiseBeforeFrame()
 {
     ProtocolParser parser;
+    QSignalSpy spy(&parser, &ProtocolParser::RealtimeDataParsed);
 
-    QSignalSpy spy(&parser, &ProtocolParser::frameReceived);
+    QByteArray payload = buildRealtimePayload(25.3, 56.7, 1, 0, 2);
+    QByteArray frame = buildPacket(FUNC_REPORT_ALL_DATA, payload);
 
-    QByteArray data;
+    QByteArray noisyData;
+    noisyData.append(static_cast<char>(0x99));
+    noisyData.append(static_cast<char>(0x88));
+    noisyData.append(static_cast<char>(0x77));
+    noisyData.append(frame);
 
-    data.append((char)0x99);
-    data.append((char)0x88);
-    data.append((char)0x77);
-
-    data.append((char)0xAA);
-    data.append((char)0x55);
-    data.append((char)FUNC_TEMP_DATA);
-    data.append((char)1);
-    data.append((char)0x66);
-
-    unsigned char sum = FUNC_TEMP_DATA + 1 + 0x66;
-
-    data.append(sum);
-    data.append((char)0xFF);
-
-    parser.onRawDataReceived(data);
+    parser.onRawDataReceived(noisyData);
 
     QCOMPARE(spy.count(), 1);
 }
 
-
-// 测试7：最大payload
-void TestProtocolParser::test_maxPayload()
+void TestProtocolParser::test_onPackReadParam()
 {
     ProtocolParser parser;
+    QSignalSpy spy(&parser, &ProtocolParser::sendRawData);
 
-    QSignalSpy spy(&parser, &ProtocolParser::frameReceived);
+    parser.onPackReadParam();
+
+    QCOMPARE(spy.count(), 1);
+
+    QByteArray sent = spy.takeFirst().at(0).toByteArray();
+
+    QByteArray expected;
+    expected.append(static_cast<char>(FRAME_HEAD_1));
+    expected.append(static_cast<char>(FRAME_HEAD_2));
+    expected.append(static_cast<char>(FUNC_READ_PARAM));
+    expected.append(static_cast<char>(0x00));
+    expected.append(static_cast<char>(FUNC_READ_PARAM)); // checksum = func + len
+    expected.append(static_cast<char>(FRAME_TAIL));
+
+    QCOMPARE(sent, expected);
+}
+
+void TestProtocolParser::test_onPackWriteParam()
+{
+    ProtocolParser parser;
+    QSignalSpy spy(&parser, &ProtocolParser::sendRawData);
+
+    ConfigData config;
+    config.targetTemperature = 2.5;
+    config.tempHighLimit = 8.0;
+    config.tempLowLimit = 2.0;
+    config.targetHumidity = 55.5;
+    config.humidHighLimit = 70.0;
+    config.humidLowLimit = 40.0;
+
+    parser.onPackWriteParam(config);
+
+    QCOMPARE(spy.count(), 1);
+
+    QByteArray sent = spy.takeFirst().at(0).toByteArray();
+
+    QByteArray payload = buildConfigPayload(2.5, 8.0, 2.0, 55.5, 70.0, 40.0);
+    QByteArray expected = buildPacket(FUNC_WRITE_PARAM, payload);
+
+    QCOMPARE(sent, expected);
+}
+
+void TestProtocolParser::test_onPackCmd()
+{
+    ProtocolParser parser;
+    QSignalSpy spy(&parser, &ProtocolParser::sendRawData);
+
+    parser.onPackCmd("01");   // payload = 0x01
+
+    QCOMPARE(spy.count(), 1);
+
+    QByteArray sent = spy.takeFirst().at(0).toByteArray();
 
     QByteArray payload;
+    payload.append(static_cast<char>(0x01));
 
-    for(int i=0;i<PROTOCOL_MAX_DATALEN;i++)
-        payload.append((char)i);
+    QByteArray expected = buildPacket(FUNC_CTRL_CMD, payload);
 
-    QByteArray frame;
-
-    frame.append((char)0xAA);
-    frame.append((char)0x55);
-    frame.append((char)FUNC_TEMP_DATA);
-    frame.append((char)payload.size());
-
-    frame.append(payload);
-
-    unsigned char sum = FUNC_TEMP_DATA + payload.size();
-
-    for(auto b : payload)
-        sum += (unsigned char)b;
-
-    frame.append(sum);
-    frame.append((char)0xFF);
-
-    parser.onRawDataReceived(frame);
-
-    QCOMPARE(spy.count(), 1);
-}
-
-// 测试8：非法长度
-void TestProtocolParser::test_illegalLength()
-{
-    ProtocolParser parser;
-
-    QSignalSpy spy(&parser, &ProtocolParser::frameReceived);
-
-    QByteArray frame;
-
-    frame.append((char)0xAA);
-    frame.append((char)0x55);
-    frame.append((char)FUNC_TEMP_DATA);
-
-    frame.append((char)(PROTOCOL_MAX_DATALEN + 10)); // 非法长度
-
-    frame.append((char)0x11);
-
-    frame.append((char)0x00);
-    frame.append((char)0xFF);
-
-    parser.onRawDataReceived(frame);
-
-    QCOMPARE(spy.count(), 0);
+    QCOMPARE(sent, expected);
 }
 
 QTEST_MAIN(TestProtocolParser)

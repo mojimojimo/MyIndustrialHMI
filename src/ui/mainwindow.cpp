@@ -17,8 +17,8 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("🔎 疫苗冷藏箱监控HMI系统");
     refreshPorts();
     initChart();
-    ui->targetTemp->setDecimals(1);
-    ui->targetTemp->setRange(-20.0,100.0);
+   // ui->targetTemp->setDecimals(1);
+    //ui->targetTemp->setRange(-20.0,100.0);
     ui->btnReadParam->setEnabled(false);
     ui->btnWriteParam->setEnabled(false); // 默认不可点，直到连接成功
     ui->tabWidget->setCurrentIndex(0);
@@ -36,8 +36,6 @@ MainWindow::MainWindow(QWidget *parent)
     //ui->statusbar->addWidget(new QLabel(" | ", this)); // 分隔符
     ui->statusbar->addWidget(lblGlobalAlarm);//
     ui->statusbar->addPermanentWidget(lblTime);
-    //设备状态流转：需要一个接口获取变量，emit信号去更新（传递一个字符串），在status链路去通知：包含按钮的按键状态，定时器启停，通信状态标签（由最开始的）。
-    //五个状态：构造函数初始化，连接以后的状态，被操作以后禁用，操作完了重新启用，断开连接的状态
 
     ui->lblDoor->setText(" - ");
     ui->lblCompress->setText(" - ");
@@ -75,6 +73,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     DeviceManager *device = new DeviceManager(this);
 
+    connect(device,&DeviceManager::configReturned,this,[=](const ConfigData &data){
+        ui->lblcurTarTemp->setText(QString::number(data.targetTemperature, 'f', 1));
+        ui->lblcurTemphl->setText(QString::number(data.tempHighLimit, 'f', 1));
+        ui->lblcurTempll->setText(QString::number(data.tempLowLimit, 'f', 1));
+        ui->lblcurTarHum->setText(QString::number(data.targetHumidity, 'f', 1));
+        ui->lblcurHumhl->setText(QString::number(data.humidHighLimit, 'f', 1));
+        ui->lblcurHumll->setText(QString::number(data.humidLowLimit, 'f', 1));
+    });
+
     connect(device,&DeviceManager::statusChanged,this,&MainWindow::onStatusChanged);
 
     //分层日志
@@ -103,26 +110,27 @@ MainWindow::MainWindow(QWidget *parent)
         device->requestClose();
     });
 
-    connect(ui->btnWriteParam,&QPushButton::clicked,[=](){//...
-        // double val = ui->targetTemp->value();
-        // short sendVal = static_cast<short>(val*10);//定点数传输
-        // QByteArray data;
-        // data.append(static_cast<char>(sendVal>>8));//?
-        // data.append(static_cast<char>(sendVal & 0xFF));
-        // emit signalSendData(FUNC_WRITE_PARAM,data);
-        // QString cleanLog = QString("下发目标温度：%1 ℃").arg(val);//业务日志
-        // writeLog(cleanLog,true);//C2137
-        ConfigData config;
-        config.targetTemperature = 5;
-        config.tempHighLimit     = 2;
-        config.tempLowLimit      = 8;
-        config.targetHumidity    = 50;
-        config.humidHighLimit    = 75;
-        config.humidLowLimit     = 35;
-        device->requestWriteParam(config);
-        //device->requestReadParam();
-        //device->requestCmd();
+    connect(ui->btnReadParam,&QPushButton::clicked,[=](){
+        device->requestReadParam();
+    });
 
+    connect(ui->btnWriteParam,&QPushButton::clicked,[=](){//...
+        ConfigData config;
+        config.targetTemperature = ui->spinNewTarTemp->value();
+        config.tempHighLimit     = ui->spinNewTemphl->value();
+        config.tempLowLimit      = ui->spinNewTempll->value();
+        config.targetHumidity    = ui->spinNewTarHum->value();
+        config.humidHighLimit    = ui->spinNewHumhl->value();
+        config.humidLowLimit     = ui->spinNewHumll->value();
+        device->requestWriteParam(config);
+    });
+
+    connect(ui->btnSilence,&QPushButton::clicked,[=](){
+        device->requestCmd("01");//
+    });
+
+    connect(ui->btnDefrost,&QPushButton::clicked,[=](){
+        device->requestCmd("02");
     });
 
     //connect(ui->btnHistory,&QPushButton::clicked,[=](){
@@ -203,7 +211,6 @@ MainWindow::MainWindow(QWidget *parent)
     QString lastBaud = settings.value("Baud").toString();
     QString lastIp   = settings.value("IP").toString();
     QString port     = settings.value("Port").toString();
-    double lastTemp  = settings.value("TargetTemp",0.0).toDouble();
 
     int idx1 = ui->portList->findText(lastPort);
     if(idx1 != -1) ui->portList->setCurrentIndex(idx1);
@@ -212,7 +219,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->ipEdit->setText(lastIp);
     ui->portEdit->setText(port);
-    ui->targetTemp->setValue(lastTemp);
 
     restoreGeometry(settings.value("Geometry").toByteArray());
 }
@@ -241,9 +247,9 @@ void MainWindow::onStatusChanged(DeviceState state){
 
         lblCommStatus->setText("🔴 设备未连接");//
 
-        ui->lblDoor->setText(" - ");
-        ui->lblCompress->setText(" - ");
-        ui->lblAlarm->setText(" - ");
+        // ui->lblDoor->setText(" - ");
+        // ui->lblCompress->setText(" - ");
+        // ui->lblAlarm->setText(" - ");
 
         ui->btnOpen->setEnabled(true);
         ui->btnClose->setEnabled(false);
@@ -357,16 +363,26 @@ void MainWindow::writeLog(const QString& level, const QString& msg){
     }
 
     // 追加到QTextBrowser中
-    ui->txtLog->insertHtml(htmlLog + "<br>"); // <br>实现换行
-    ui->txtLog->ensureCursorVisible();
+    //ui->txtLog->insertHtml(htmlLog + "<br>"); // <br>实现换行
+    ui->txtLog->append(htmlLog);
+    //ui->txtLog->ensureCursorVisible();
+    ui->txtLog->verticalScrollBar()->setValue(ui->txtLog->verticalScrollBar()->maximum()); // 强制滚到底部
+
 
     // 追加后检查行数，超过1000行则删除首行
     QTextDocument* doc = ui->txtLog->document();
-    if (doc->blockCount() > 1000) {
-        QTextCursor cursor(doc->findBlockByLineNumber(0));
+    // if (doc->blockCount() > 1000) {
+    //     QTextCursor cursor(doc->findBlockByLineNumber(0));
+    //     cursor.select(QTextCursor::BlockUnderCursor);
+    //     cursor.removeSelectedText();
+    //     cursor.deleteChar(); // 删除换行符
+    // }
+
+    while (doc->blockCount() > 1000) {
+        QTextCursor cursor(doc->firstBlock()); // 定位到最早的一条日志
         cursor.select(QTextCursor::BlockUnderCursor);
         cursor.removeSelectedText();
-        cursor.deleteChar(); // 删除换行符
+        cursor.deleteChar(); // 删除段落间的空行
     }
 }
 
@@ -410,7 +426,6 @@ void MainWindow::closeEvent(QCloseEvent *event){
     settings.setValue("IP", ui->ipEdit->text());
     settings.setValue("Port",ui->portEdit->text());
 
-    settings.setValue("TargetTemp", ui->targetTemp->value());
     settings.setValue("Geometry", saveGeometry());
     event->accept(); // 允许窗口关闭
 
