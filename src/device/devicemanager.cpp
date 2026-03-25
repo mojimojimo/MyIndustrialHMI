@@ -333,7 +333,7 @@ void DeviceManager::setupPipeline(int type){
     //接收链路
     connect(worker,&CommWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
     //connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
-    connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed,Qt::DirectConnection);
+    connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
     connect(parser,&ProtocolParser::configParamLoaded,this,&DeviceManager::onConfigParamLoaded);
     connect(parser,&ProtocolParser::cmdAckReceived,this,&DeviceManager::onCmdAckReceived);
 

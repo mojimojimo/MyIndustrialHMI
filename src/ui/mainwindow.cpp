@@ -21,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
     //ui->targetTemp->setRange(-20.0,100.0);
     ui->btnReadParam->setEnabled(false);
     ui->btnWriteParam->setEnabled(false); // 默认不可点，直到连接成功
+    ui->stackedWidget->setCurrentIndex(0);
     ui->tabWidget->setCurrentIndex(0);
 
     //全局状态栏
