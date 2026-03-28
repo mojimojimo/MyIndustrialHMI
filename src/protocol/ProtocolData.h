@@ -8,7 +8,7 @@ struct DeviceData{
     double actualHumidity = 0.0;     // 箱内湿度
     uint8_t doorStatus = 0;        // 箱门状态: 0-已关紧, 1-未关紧 (开门太久要报警)
     uint8_t compressorStatus = 0;  // 压缩机状态: 0-待机, 1-制冷中
-    uint8_t alarmCode = 0;         // 故障码: 0-系统正常, 1-温度超限, 2-传感器脱落
+    uint8_t alarmCode = 0;         // 故障码: 0-系统正常, 1-温度超限, 2...
 };
 Q_DECLARE_METATYPE(DeviceData) //注册元类型
 
@@ -58,5 +58,6 @@ struct Frame{
     QByteArray payload;
 };
 Q_DECLARE_METATYPE(Frame)
+
 
 #endif // PROTOCOLDATA_H

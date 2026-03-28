@@ -253,7 +253,7 @@ QProgressBar::chunk {
        <string notr="true"/>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_5">
        <widget class="QWidget" name="widget_3" native="true">
@@ -275,7 +275,7 @@ QProgressBar::chunk {
          <item row="0" column="0">
           <widget class="QGroupBox" name="groupBox_4">
            <property name="title">
-            <string>当前温度</string>
+            <string>实时环境监控</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_5" columnstretch="3,5,2">
             <item row="2" column="1">
@@ -879,7 +879,7 @@ border: 1px solid #666;</string>
         <property name="title">
          <string>指令下发</string>
         </property>
-        <widget class="QWidget" name="">
+        <widget class="QWidget" name="layoutWidget">
          <property name="geometry">
           <rect>
            <x>60</x>
