@@ -48,9 +48,9 @@
 
 |实时监控大屏|参数配置与指令下发|
 |:-:|:-:|
-|!\[实时监控](images/realtime.png)|!\[参数配置](images/config.png)|
+|!\[实时监控](https://github.com/mojimojimo/MyIndustrialHMI/blob/master/images/realtime.png?raw=true)|!\[参数配置](https://github.com/mojimojimo/MyIndustrialHMI/blob/master/images/config.png?raw=true)|
 |**历史追溯与 CSV 导出**|**原始报文与分级日志**|
-|!\[历史数据](images/history.png)|!\[分级日志](images/logs.png)|
+|!\[历史数据](https://github.com/mojimojimo/MyIndustrialHMI/blob/master/images/history.png?raw=true)|!\[分级日志](https://github.com/mojimojimo/MyIndustrialHMI/blob/master/images/logs.png?raw=true)|
 
 
 
