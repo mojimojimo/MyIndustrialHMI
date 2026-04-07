@@ -44,12 +44,31 @@ bool DatabaseManager::init(){
         return false;
     }
 
+    m_flushTimer = new QTimer(this);
+    m_flushTimer->setInterval(50);
+    connect(m_flushTimer, &QTimer::timeout, this, &DatabaseManager::commitBatchInsert);
+    m_flushTimer->start();
+
     qDebug()<<"DB is ok!";
     return true;
 }
 
 void DatabaseManager::onInsertEnvData(double temp, double hum){
 
+    m_envBuffer.append({temp, hum});
+    if (shouldFlushNow()) {
+        commitBatchInsert();
+    }
+
+}
+
+void DatabaseManager::commitBatchInsert(){
+    if (m_envBuffer.isEmpty()) return;
+
+    if (!m_db.transaction()) {
+        qDebug() << "[DB] start transaction failed:" << m_db.lastError();
+        return;
+    }
     //auto timestamp = QDateTime::currentDateTime();
     //sql注入
     // if(! query.exec(QString("insert into temperature_records values (%1,%2);").arg(timestamp).arg(value))){
@@ -58,11 +77,24 @@ void DatabaseManager::onInsertEnvData(double temp, double hum){
 
     QSqlQuery query(m_db);
     query.prepare("insert into env_history (temperature, humidity) values (?,?)");//参数绑定：分离解析
-    query.addBindValue(temp);
-    query.addBindValue(hum);
+    //query.addBindValue(temp);
+    //query.addBindValue(hum);
+    for(const auto& record : m_envBuffer){
+        query.addBindValue(record.temperature);
+        query.addBindValue(record.humidity);
+        if(!query.exec()){
+            qDebug()<<"Batch insert error:"<<query.lastError();
+            m_db.rollback(); // 回滚事务
+            return;
+        }
+    }
 
-    if(!query.exec()){
-        qDebug()<<"InsertEnvData error:"<<query.lastError();
+    if(m_db.commit()){// 提交事务
+        qDebug()<<"[DB] 成功批量写入: "<<m_envBuffer.size()<<" 条数据";
+        m_envBuffer.clear(); // 只在提交成功后清空缓冲区
+    } else {
+        qDebug()<<"[DB] 批量写入失败:"<<m_db.lastError();
+        m_db.rollback(); // 回滚事务
     }
 }
 
@@ -78,6 +110,8 @@ void DatabaseManager::onInsertEvent(const QString &type, const QString &desc){
 }
 
 void DatabaseManager::onQueryHistory(const QDateTime &start,const QDateTime& end){
+
+    commitBatchInsert();// 确保查询前把缓冲区数据写入数据库
 
     QList<HistoryData> list;
     QSqlQuery query(m_db);//"  "
@@ -104,6 +138,12 @@ void DatabaseManager::onQueryHistory(const QDateTime &start,const QDateTime& end
 
 DatabaseManager::~DatabaseManager()
 {
+    if(!m_envBuffer.isEmpty()){ // 确保退出前把缓冲区剩余数据写入数据库
+        commitBatchInsert();
+    }
+    if (m_flushTimer) {
+        m_flushTimer->stop();
+    }
     if (m_db.isOpen()) {
         m_db.close();
     }
@@ -111,4 +151,9 @@ DatabaseManager::~DatabaseManager()
     // 移除数据库连接
     m_db = QSqlDatabase(); // 释放对连接的引用
     QSqlDatabase::removeDatabase("MedicalDbConnection");
+}
+
+bool DatabaseManager::shouldFlushNow() const
+{
+    return m_envBuffer.size() >= BATCH_SIZE;
 }
