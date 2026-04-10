@@ -1,7 +1,13 @@
 #include <QtTest>
 #include <QSignalSpy>
-
 #include "protocolparser.h"
+
+/*
+ * 协议解析层回归测试：
+ * 1) 正常帧解析正确
+ * 2) 粘包/半包/噪声重同步正确
+ * 3) ring跨边界与溢出策略正确
+ */
 
 static void appendU16BE(QByteArray &ba, quint16 value)
 {
@@ -76,6 +82,8 @@ private slots:
     void test_halfPacket();
     void test_stickyPackets();
     void test_noiseBeforeFrame();
+    void test_ringWrapAroundFrame();
+    void test_ringOverflowDrop();
 
     void test_onPackReadParam();
     void test_onPackWriteParam();
@@ -208,6 +216,53 @@ void TestProtocolParser::test_noiseBeforeFrame()
     parser.onRawDataReceived(noisyData);
 
     QCOMPARE(spy.count(), 1);
+}
+
+void TestProtocolParser::test_ringWrapAroundFrame()
+{
+    ProtocolParser parser;
+    QSignalSpy ackSpy(&parser, &ProtocolParser::cmdAckReceived);
+
+    // 构造长度为1的帧，方便拆成“尾部5字节 + 头部2字节”跨边界场景。
+    QByteArray payload;
+    payload.append(static_cast<char>(0x42));
+    QByteArray frame = buildPacket(FUNC_CMD_ACK, payload);
+    QCOMPARE(frame.size(), 7);
+
+    // 先喂大量噪声，再拼上前5字节；解析器会丢弃噪声，仅保留5字节半包。
+    QByteArray chunk1(65531, static_cast<char>(0x00));
+    chunk1.append(frame.left(5));
+    parser.onRawDataReceived(chunk1);
+    QCOMPARE(ackSpy.count(), 0);
+
+    // 再喂后2字节，形成跨ring尾/头的完整帧。
+    parser.onRawDataReceived(frame.mid(5));
+    QCOMPARE(ackSpy.count(), 1);
+}
+
+void TestProtocolParser::test_ringOverflowDrop()
+{
+    ProtocolParser parser;
+    QSignalSpy logSpy(&parser, &ProtocolParser::logProtocol);
+    QSignalSpy dataSpy(&parser, &ProtocolParser::RealtimeDataParsed);
+
+    // 超过ring容量(64KB)的单次输入应被丢弃并产生WARNING日志。
+    QByteArray tooLarge(65537, static_cast<char>(0x5A));
+    parser.onRawDataReceived(tooLarge);
+
+    bool hasOverflowWarning = false;
+    for (int i = 0; i < logSpy.count(); ++i) {
+        const QList<QVariant> args = logSpy.at(i);
+        const QString level = args.at(0).toString();
+        const QString message = args.at(1).toString();
+        if (level == "WARNING" && message.contains("ring buffer空间不足")) {
+            hasOverflowWarning = true;
+            break;
+        }
+    }
+
+    QVERIFY(hasOverflowWarning);
+    QCOMPARE(dataSpy.count(), 0);
 }
 
 void TestProtocolParser::test_onPackReadParam()
