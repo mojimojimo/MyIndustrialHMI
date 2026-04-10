@@ -17,33 +17,28 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("🔎 疫苗冷藏箱监控HMI系统");
     refreshPorts();
     initChart();
-   // ui->targetTemp->setDecimals(1);
-    //ui->targetTemp->setRange(-20.0,100.0);
     ui->btnReadParam->setEnabled(false);
     ui->btnWriteParam->setEnabled(false); // 默认不可点，直到连接成功
     ui->stackedWidget->setCurrentIndex(0);
     ui->tabWidget->setCurrentIndex(0);
 
-    //全局状态栏
-    lblCommStatus = new QLabel("⚫ 未连接", this);//
+    // 全局状态栏
+    lblCommStatus = new QLabel("⚫ 未连接", this);
     lblGlobalAlarm = new QLabel("", this);
     QLabel *lblTime = new QLabel("当前时间：00:00:00", this);
 
     // 样式设置
-    lblGlobalAlarm->setStyleSheet("color: red; font-weight: bold;");//
+    lblGlobalAlarm->setStyleSheet("color: red; font-weight: bold;");
 
-    // 添加到状态栏 (addPermanentWidget 会靠右对齐，addWidget 靠左)
+    // addPermanentWidget 靠右，addWidget 靠左
     ui->statusbar->addWidget(lblCommStatus);
-    //ui->statusbar->addWidget(new QLabel(" | ", this)); // 分隔符
-    ui->statusbar->addWidget(lblGlobalAlarm);//
+    ui->statusbar->addWidget(lblGlobalAlarm);
     ui->statusbar->addPermanentWidget(lblTime);
 
     ui->lblDoor->setText(" - ");
     ui->lblCompress->setText(" - ");
     ui->lblAlarm->setText(" - ");
-    //ui->lcdTemp->setMode(QLCDNumber::Dec);
-
-    //刷新时间戳
+    // 刷新时间戳
     timer = new QTimer(this);
     connect(timer,&QTimer::timeout,this,[=](){
         QString timeStr = QDateTime::currentDateTime().toString("HH:mm:ss");
@@ -93,17 +88,16 @@ MainWindow::MainWindow(QWidget *parent)
     // });
 
     connect(ui->btnOpen,&QPushButton::clicked,[=](){
-        int mode = ui->modeList->currentIndex();//
+        int mode = ui->modeList->currentIndex();
         QString target;
         int portOrBaud;
-        if(mode){//mode和mode==0
-            target = ui->ipEdit->text();//mode==1:TCP
+        if(mode){
+            target = ui->ipEdit->text();
             portOrBaud = ui->portEdit->text().toInt();
         }else{
             target = ui->portList->currentData().toString();
             portOrBaud = ui->baudList->currentText().toInt();
         }
-        //qDebug()<<target<<mode<<portOrBaud;
         device->requestOpen(mode,target,portOrBaud);
     });
 
@@ -115,7 +109,7 @@ MainWindow::MainWindow(QWidget *parent)
         device->requestReadParam();
     });
 
-    connect(ui->btnWriteParam,&QPushButton::clicked,[=](){//...
+    connect(ui->btnWriteParam,&QPushButton::clicked,[=](){
         ConfigData config;
         config.targetTemperature = ui->spinNewTarTemp->value();
         config.tempHighLimit     = ui->spinNewTemphl->value();
@@ -127,33 +121,21 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->btnSilence,&QPushButton::clicked,[=](){
-        device->requestCmd("01");//
+        device->requestCmd("01");
     });
 
     connect(ui->btnDefrost,&QPushButton::clicked,[=](){
         device->requestCmd("02");
     });
 
-    //connect(ui->btnHistory,&QPushButton::clicked,[=](){
-        // HistoryDialog dlg(this);
-        // dlg.exec(); // 模态显示
-        //HistoryDialog* dialog = new HistoryDialog(this);
-        //查询
-        connect(ui->historyWidget, &HistoryWidget::sigRequestHistory, device, &DeviceManager::sigQueryDbHistory);
-        //接收
-        connect(device, &DeviceManager::sigDbHistoryReady, ui->historyWidget, &HistoryWidget::onReceiveHistoryData);
-
-        //dialog->setAttribute(Qt::WA_DeleteOnClose); // 关掉窗口自动销毁内存
-       // dialog->show();
-    //});
+    // 历史查询: UI发起查询请求 -> DeviceManager转发到数据库线程 -> UI接收结果
+    connect(ui->historyWidget, &HistoryWidget::sigRequestHistory, device, &DeviceManager::sigQueryDbHistory);
+    connect(device, &DeviceManager::sigDbHistoryReady, ui->historyWidget, &HistoryWidget::onReceiveHistoryData);
 
     refreshTimer = new QTimer(this);
     connect(refreshTimer,&QTimer::timeout,this,[=](){
 
-       //if(device->state != DeviceState::Connected) return;
-
         DeviceData curData = device->getLatestData();
-        //QString globalAlarmText = "";
 
         // 1. 更新温度和湿度
         ui->lcdTemp->display(QString::number(curData.actualTemperature,'f',1));
@@ -199,12 +181,12 @@ MainWindow::MainWindow(QWidget *parent)
             ui->lblAlarm->setText(QString("系统告警！故障码: %1").arg(curData.alarmCode));
             ui->lblAlarm->setStyleSheet("background-color: red; color: white; font-weight: bold; border-radius: 4px; padding: 2px;");
         }
-        //重绘实时曲线
-        //updatePlot(curData.actualTemperature);
+        // 重绘实时曲线
         onDataReceived(curData);
 
     });
-    refreshTimer->setInterval(50);//50ms触发，而下位机1s才发一次，读写分离，暂时多次读取同一数据
+    // UI以固定节拍刷新，和底层输入频率解耦，避免高频I/O直接推高主线程负载
+    refreshTimer->setInterval(50);
 
     //加载配置
     QSettings settings("config.ini", QSettings::IniFormat);
@@ -246,11 +228,7 @@ void MainWindow::onStatusChanged(DeviceState state){
                     border: 1px solid #666;
                 })");
 
-        lblCommStatus->setText("🔴 设备未连接");//
-
-        // ui->lblDoor->setText(" - ");
-        // ui->lblCompress->setText(" - ");
-        // ui->lblAlarm->setText(" - ");
+        lblCommStatus->setText("🔴 设备未连接");
 
         ui->btnOpen->setEnabled(true);
         ui->btnClose->setEnabled(false);
@@ -260,14 +238,11 @@ void MainWindow::onStatusChanged(DeviceState state){
         break;
 
     case DeviceState::Connecting:
-        lblCommStatus->setText("🟡 连接中...");//
+        lblCommStatus->setText("🟡 连接中...");
         break;
 
     case DeviceState::Reconnecting:
-        // ui->lblConnStatus->setText("连接中/重连中...");
-        // ui->lblConnStatus->setStyleSheet("color: orange; font-weight: bold;");
-
-        lblCommStatus->setText("🟡 连接不稳定，尝试恢复...");//
+        lblCommStatus->setText("🟡 连接不稳定，尝试恢复...");
         break;
 
     case DeviceState::Connected:
@@ -283,7 +258,7 @@ void MainWindow::onStatusChanged(DeviceState state){
                     border: 1px solid #666;
                 })");
 
-        lblCommStatus->setText("🟢 设备已在线");//
+        lblCommStatus->setText("🟢 设备已在线");
 
         ui->btnOpen->setEnabled(false);
         ui->btnClose->setEnabled(true);
@@ -301,9 +276,6 @@ void MainWindow::onStatusChanged(DeviceState state){
     }
 }
 
-// void MainWindow::updateRealTimeUI(const DeviceData &data){
-
-// }
 
 void MainWindow::onDataReceived(const DeviceData &data){
 
@@ -312,7 +284,7 @@ void MainWindow::onDataReceived(const DeviceData &data){
     // 添加数据点
     ui->plotTemp->graph(0)->addData(key, data.actualTemperature);
     ui->plotTemp->graph(1)->addData(key, data.actualHumidity);
-    // 移除太老的数据 (比如只保留最近 100 个点，防止内存爆掉)
+    //  固定时间窗裁剪历史点，进一步控制内存占用
     //ui->plotTemp->graph(0)->data()->removeBefore(key - 100);
     //ui->plotTemp->graph(1)->data()->removeBefore(key - 100);
     // 实现自动滚动，最右侧边界key，跨度60s
@@ -329,7 +301,7 @@ void MainWindow::refreshPorts(){
     const auto infos = QSerialPortInfo::availablePorts();
     for(auto &info:infos){
         QString port = info.portName()+"("+info.description()+")";
-        ui->portList->addItem(port,info.portName());//？
+        ui->portList->addItem(port,info.portName());
     }
 
     ui->baudList->clear();
@@ -363,21 +335,13 @@ void MainWindow::writeLog(const QString& level, const QString& msg){
         lblGlobalAlarm->setText(htmlLog);
     }
 
-    // 追加到QTextBrowser中
-    //ui->txtLog->insertHtml(htmlLog + "<br>"); // <br>实现换行
+    // 追加到日志窗并滚动到底部
     ui->txtLog->append(htmlLog);
     //ui->txtLog->ensureCursorVisible();
     ui->txtLog->verticalScrollBar()->setValue(ui->txtLog->verticalScrollBar()->maximum()); // 强制滚到底部
 
-
-    // 追加后检查行数，超过1000行则删除首行
+    // 日志行数上限控制
     QTextDocument* doc = ui->txtLog->document();
-    // if (doc->blockCount() > 1000) {
-    //     QTextCursor cursor(doc->findBlockByLineNumber(0));
-    //     cursor.select(QTextCursor::BlockUnderCursor);
-    //     cursor.removeSelectedText();
-    //     cursor.deleteChar(); // 删除换行符
-    // }
 
     while (doc->blockCount() > 1000) {
         QTextCursor cursor(doc->firstBlock()); // 定位到最早的一条日志

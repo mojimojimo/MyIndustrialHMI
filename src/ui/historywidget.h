@@ -29,7 +29,6 @@ signals:
 private:
     Ui::HistoryWidget *ui;
     QList<HistoryData> m_curDataList;
-    //void initChart();
     void initPlot();
     void updatePlot(const QList<HistoryData>& dataList);
 

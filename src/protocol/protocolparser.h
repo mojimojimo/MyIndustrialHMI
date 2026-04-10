@@ -18,11 +18,11 @@ public slots:
     void onPackCmd(const QString &cmd);
 
 signals:
-    void sendRawData(const QByteArray &rawdata);//->Serial
-    void RealtimeDataParsed(const DeviceData &data);//->Device 实时数据
-    void configParamLoaded(const ConfigData &data); //->Device 参数配置
-    void cmdAckReceived(bool ack, quint8 result);   //->Device 应答
-    void logProtocol(const QString& level, const QString& message); //->Device
+    void sendRawData(const QByteArray &rawdata);           // -> CommWorker
+    void RealtimeDataParsed(const DeviceData &data);       // -> DeviceManager 实时数据
+    void configParamLoaded(const ConfigData &data);        // -> DeviceManager 参数配置
+    void cmdAckReceived(bool ack, quint8 result);          // -> DeviceManager 指令应答
+    void logProtocol(const QString& level, const QString& message);
 
 private:
 

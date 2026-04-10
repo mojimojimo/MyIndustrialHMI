@@ -13,7 +13,6 @@ HistoryWidget::HistoryWidget(QWidget *parent)
     ui->dtStart->setDateTime(QDateTime::currentDateTime().addSecs(-3600));
 
     // 初始化QCustomPlot
-    //initChart();
     initPlot();
 }
 
@@ -21,23 +20,6 @@ HistoryWidget::~HistoryWidget()
 {
     delete ui;
 }
-
-// void HistoryWidget::initChart(){
-//     ui->plotHistory->addGraph();
-//     ui->plotHistory->graph(0)->setPen(QPen(Qt::blue));
-
-//     ui->plotHistory->xAxis->setLabel("时间 (s)");
-//     ui->plotHistory->yAxis->setLabel("温度 (℃)");
-
-//     ui->plotHistory->yAxis->setRange(-50, 50);
-
-//     ui->plotHistory->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
-
-//     QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
-//     dateTicker->setDateTimeFormat("HH:mm:ss");
-//     ui->plotHistory->xAxis->setTicker(dateTicker);
-//     ui->plotHistory->xAxis->setTickLabelRotation(30);
-// }
 
 void HistoryWidget::initPlot() {
     // 添加温度曲线
@@ -107,7 +89,7 @@ void HistoryWidget::on_btnQuery_clicked() {
     ui->btnQuery->setEnabled(false);
     ui->lblStatus->setText("正在后台检索数据，请稍候...");
 
-    // 发出查询请求信号 (去往子线程的 DbWorker)?
+    // 发出查询请求信号，交由数据库线程执行
     emit sigRequestHistory(start, end);
 }
 

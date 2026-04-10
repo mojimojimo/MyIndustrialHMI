@@ -1,8 +1,8 @@
 #include "serialworker.h"
-#include<QDebug>
+#include <QDebug>
 
 SerialWorker::SerialWorker(CommWorker *parent)
-    : CommWorker{parent}//
+    : CommWorker{parent}
 {
     serial = new QSerialPort(this);
 
@@ -20,7 +20,6 @@ SerialWorker::~SerialWorker(){
 
 void SerialWorker::onReadyRead(){
     QByteArray data = serial->readAll();
-//.toHex(' ').toUpper()
     emit rawDataReceived(data);
 }
 
@@ -30,7 +29,7 @@ void SerialWorker::open(QString target, int portOrBaud){
     //配置串口参数
     serial->setPortName(target);
     serial->setBaudRate(portOrBaud);
-    //8N1
+    // 预留: 如需与设备协议严格对齐，可显式配置8N1。
     // serial->setDataBits(QSerialPort::Data8);
     // serial->setParity(QSerialPort::NoParity);
     // serial->setStopBits(QSerialPort::OneStop);
@@ -40,7 +39,8 @@ void SerialWorker::open(QString target, int portOrBaud){
         emit logComm("INFO", "串口打开成功");
         emit StatusChanged(true);
     } else {
-        //emit errorOccurred(serial->errorString());
+        // 预留: 可恢复errorOccurred信号链路以区分日志与业务错误弹窗。
+        // emit errorOccurred(serial->errorString());
         emit logComm("ERROR", QString("串口打开失败：%1").arg(serial->errorString()));
         emit StatusChanged(false);
     }
@@ -54,8 +54,6 @@ void SerialWorker::close(){
 }
 
 void SerialWorker::sendData(const QByteArray &data){
-    //发数据 qint64
-    //QByteArray sendData = QByteArray::fromHex("AA55020119FF");//AA 55 02 01 19 3F
     if (serial && serial->isOpen()) {
         serial->write(data);
     }
@@ -63,9 +61,7 @@ void SerialWorker::sendData(const QByteArray &data){
 
 
 void SerialWorker::handleError(QSerialPort::SerialPortError error){
-    //qDebug()<<"handleError被执行了！";
-    //虚拟串口无 “硬件检测”
-    if(error == QSerialPort::NoError) return;//没错误
+    if(error == QSerialPort::NoError) return;
     QString errorStr;
     bool needClose = false;
 
@@ -78,7 +74,7 @@ void SerialWorker::handleError(QSerialPort::SerialPortError error){
         errorStr = "权限不足（设备被占用）！";
         needClose = true;
         break;
-    case QSerialPort::DeviceNotFoundError://在注释掉串口逻辑时候触发了！
+    case QSerialPort::DeviceNotFoundError:
         errorStr = "找不到指定设备！";
         needClose = true;
         break;
@@ -91,7 +87,8 @@ void SerialWorker::handleError(QSerialPort::SerialPortError error){
             serial->close();
         }
         emit StatusChanged(false);
-        //emit errorOccurred(errorStr);
+        // 预留: 可恢复errorOccurred信号链路给上层做专门故障处理。
+        // emit errorOccurred(errorStr);
         emit logComm("ERROR", errorStr);
     }
 }

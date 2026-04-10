@@ -22,19 +22,16 @@ public:
 public slots:
     // 接收子线程的反馈
     void onStatusChanged(DeviceState state);
-    void onDataReceived(const DeviceData &data);//<-Device改！！！
+    void onDataReceived(const DeviceData &data);//<-Device
     void writeLog(const QString& level, const QString& msg);
 
 signals:
-    //void signalSendData(char funcCode, const QByteArray &dataContent);//->Device
 
 private:
     Ui::MainWindow *ui;
 
     void refreshPorts();
     void initChart();
-
-    //void updateRealTimeUI(const DeviceData &data);
 
     void closeEvent(QCloseEvent *event);
     QTimer *refreshTimer = nullptr;

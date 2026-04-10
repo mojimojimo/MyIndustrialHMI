@@ -48,13 +48,12 @@ public slots:
     void onRealtimeDataParsed(const DeviceData &newData);//<-Parser
     void onConfigParamLoaded(const ConfigData &data); //<-Parser
     void onCmdAckReceived(bool ack, quint8 errorCode); //<-Parser
-    //void onSendData(char funcCode, const QByteArray &dataContent); //<-UI
+  
     void requestReadParam(); //<-UI
     void requestWriteParam(const ConfigData &data); //<-UI
     void requestCmd(const QString &cmd); //<-UI
     void requestOpen(int type,QString portName,int baudRate);      //<-UI
     void requestClose();                                           //<-UI
-    //void setAlarmThresholds(double lower, double upper, bool isTemp);   //<-UI
 
 signals:
     void signalOpen(QString target,int portOrBaud);     //->worker
@@ -62,8 +61,7 @@ signals:
     void packReadParam(); //->Parser
     void packWriteParam(const ConfigData &config); //->Parser
     void packCmd(const QString &cmd); //->Parser
-    //void sendFrame(const Frame &frame);                 //->Parser
-    //void dataReceived(const DeviceData &data);          //->UI
+
     void configReturned(const ConfigData &config);
     void logBusiness(const QString& level, const QString& message); //->UI
 
@@ -76,16 +74,15 @@ signals:
     void sigDbHistoryReady(const QList<HistoryData>& dataList); //->UI
 
 private:
-    QTimer *timer = nullptr;        //心跳定时器
-    QTimer *timeoutTimer = nullptr; //检测定时器
+    QTimer *timer = nullptr;        // 业务定时器（预留心跳/轮询扩展）
+    QTimer *timeoutTimer = nullptr; // 检测定时器
     QElapsedTimer responseTimer;    //最新回复
 
     DeviceState state = DeviceState::Disconnected;
-    int retryCount = 0;             //重连次数
+    int retryCount = 0;             // 自动重连计数
 
     DeviceData m_latestData;
-    QMutex m_dataMutex;             // 跨线程数据保护锁
-    QMutex m_configMutex;           // 参数配置保护锁
+    QMutex m_dataMutex;             // 跨线程数据保护锁，防止后续出现隐性竞态
     QTimer *m_dbSampleTimer = nullptr;        // 数据库降采样定时器
 
     QThread *workThread = nullptr;

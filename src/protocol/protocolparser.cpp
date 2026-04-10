@@ -113,17 +113,17 @@ void ProtocolParser::processRawData(){
         qDebug()<<"半包";
         return;
     }
-    while (ringAvailable() >= 6) {// 当前协议最小包长度为6(无payload)
+    while (ringAvailable() >= 6) { // 当前协议最小包长度为6(无payload)
 
-        //1.帧头校验：移除脏数据
+        // 1. 帧头校验: 非法起始字节按1B滑动重同步
         if (ringPeek(0) != static_cast<char>(FRAME_HEAD_1) || ringPeek(1) != static_cast<char>(FRAME_HEAD_2)) {
             ringDrop(1);
-            continue;//直到找到帧头
+            continue;
         }
         qDebug()<<"检测到帧头";
         // 长度字段必须按无符号读取，避免负值造成越界解析
         unsigned char datalen = static_cast<unsigned char>(ringPeek(3));
-        //2.datalen校验
+        // 2. datalen校验
         if (datalen > PROTOCOL_MAX_DATALEN) {
             qDebug()<<"【错误】数据长度非法（超过协议最大值"<<PROTOCOL_MAX_DATALEN<<"）";
             emit logProtocol("DEBUG", "数据长度非法（超过协议最大值）");
@@ -131,7 +131,7 @@ void ProtocolParser::processRawData(){
             continue;
         }
 
-        //3.包长度校验：断包校验
+        // 3. 包长度校验: 半包时等待下一次输入
         int packetSize = 2 + 1 + 1 + datalen + 1 + 1;
         if (ringAvailable() < packetSize) {
             qDebug()<<"断包";
@@ -139,15 +139,15 @@ void ProtocolParser::processRawData(){
             break;
         }
 
-        //4~5步都基于相对head偏移读取，避免复制整包
-        //4.帧尾校验：完整帧格式
+        // 4~5步基于相对head偏移读取，避免复制整包
+        // 4. 帧尾校验
         if (ringPeek(packetSize - 1) != static_cast<char>(FRAME_TAIL)) {
             qDebug()<<"【错误包】帧尾校验失败";
             emit logProtocol("DEBUG", "帧尾校验失败");
             ringDrop(1);
             continue;
         }
-        //5.校验码：校验payload
+        // 5. 校验码校验
         unsigned char calSum = 0;
         for (int i = 2; i < packetSize - 2; ++i) {
             calSum += static_cast<unsigned char>(ringPeek(i));
@@ -157,7 +157,6 @@ void ProtocolParser::processRawData(){
             Frame frame;
             frame.funcCode = static_cast<quint8>(ringPeek(2));
             frame.payload = ringReadSlice(4, datalen);
-            //emit frameReceived(frame);
             processFrame(frame);
 
         } else {
@@ -204,7 +203,7 @@ void ProtocolParser::processFrame(const Frame &frame) {
 
         emit RealtimeDataParsed(data);
     }
-    else if (frame.funcCode == FUNC_PARAM_RETURN) {//
+    else if (frame.funcCode == FUNC_PARAM_RETURN) {
         if(frame.payload.size() < 12) return;
 
         QDataStream stream(frame.payload);
@@ -262,30 +261,26 @@ void ProtocolParser::onPackWriteParam(const ConfigData &config){
 void ProtocolParser::onPackCmd(const QString &cmd){
     Frame frame;
     frame.funcCode = FUNC_CTRL_CMD;
-    frame.payload = QByteArray::fromHex(cmd.toUtf8());//
+    frame.payload = QByteArray::fromHex(cmd.toUtf8());
     buildPacket(frame);
 }
 
-void ProtocolParser::buildPacket(const Frame &frame){//应用层封包
+void ProtocolParser::buildPacket(const Frame &frame){ // 应用层封包
 
     QByteArray packet;
     packet.append(static_cast<char>(FRAME_HEAD_1));//帧头
     packet.append(static_cast<char>(FRAME_HEAD_2));
 
-    packet.append(frame.funcCode);//功能码 int->Hex
-    packet.append(static_cast<char>(frame.payload.size()));//数据长度 qsizetype怎么转16进制
+    packet.append(frame.funcCode); // 功能码
+    packet.append(static_cast<char>(frame.payload.size())); // 数据长度(1B)
 
     packet.append(frame.payload);
 
-    //计算校验和
+    // 计算校验和: 从功能码开始累加到payload末尾
     unsigned char sum =0;
-    //sum计算修正
     for(int i=2;i<packet.size();i++){
         sum+= static_cast<unsigned char>(packet.at(i));
-        //qDebug()<<"校验和3"<<sum;
     }
-    //qDebug()<<"校验和"<<sum;
-    //sum = sum & 0xFF;
     packet.append(sum);
     packet.append(static_cast<char>(FRAME_TAIL));
     emit sendRawData(packet);

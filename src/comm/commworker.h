@@ -8,7 +8,7 @@ class CommWorker : public QObject
     Q_OBJECT
 public:
     explicit CommWorker(QObject *parent = nullptr);
-    virtual ~CommWorker(){} //虚析构函数
+    virtual ~CommWorker(){} // 保证子类通过基类指针析构安全
 
 public slots:
     virtual void open(QString target,int portOrBaud) = 0;// <-device 纯虚函数

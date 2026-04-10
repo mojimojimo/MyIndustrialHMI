@@ -69,16 +69,10 @@ void DatabaseManager::commitBatchInsert(){
         qDebug() << "[DB] start transaction failed:" << m_db.lastError();
         return;
     }
-    //auto timestamp = QDateTime::currentDateTime();
-    //sql注入
-    // if(! query.exec(QString("insert into temperature_records values (%1,%2);").arg(timestamp).arg(value))){
-    //      qDebug()<<"Insert error:"<<query.lastError();
-    // }
 
     QSqlQuery query(m_db);
-    query.prepare("insert into env_history (temperature, humidity) values (?,?)");//参数绑定：分离解析
-    //query.addBindValue(temp);
-    //query.addBindValue(hum);
+    // 使用参数绑定，避免字符串拼接带来的注入和类型转换问题
+    query.prepare("insert into env_history (temperature, humidity) values (?,?)");
     for(const auto& record : m_envBuffer){
         query.addBindValue(record.temperature);
         query.addBindValue(record.humidity);
@@ -100,7 +94,7 @@ void DatabaseManager::commitBatchInsert(){
 
 void DatabaseManager::onInsertEvent(const QString &type, const QString &desc){
     QSqlQuery query(m_db);
-    query.prepare("insert into event_logs (event_type, description) values (?,?)");//参数绑定：分离解析
+    query.prepare("insert into event_logs (event_type, description) values (?,?)");
     query.addBindValue(type);
     query.addBindValue(desc);
 
@@ -111,10 +105,11 @@ void DatabaseManager::onInsertEvent(const QString &type, const QString &desc){
 
 void DatabaseManager::onQueryHistory(const QDateTime &start,const QDateTime& end){
 
-    commitBatchInsert();// 确保查询前把缓冲区数据写入数据库
+    // 查询前先落盘缓存，保证历史结果与当前内存缓冲一致
+    commitBatchInsert();
 
     QList<HistoryData> list;
-    QSqlQuery query(m_db);//"  "
+    QSqlQuery query(m_db);
 
     query.prepare("SELECT timestamp, temperature, humidity FROM env_history "
                   "WHERE datetime(timestamp, 'localtime') BETWEEN :start AND :end ORDER BY timestamp ASC");

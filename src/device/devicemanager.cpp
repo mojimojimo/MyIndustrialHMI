@@ -14,7 +14,7 @@ DeviceManager::DeviceManager(QObject *parent)
     timeoutTimer->setInterval(500);
     m_dbSampleTimer->setInterval(1000);
 
-    // //定时发送心跳包
+    // 预留扩展: 定时心跳包（当前采用超时检测+重连）。
     // connect(timer,&QTimer::timeout,this,[=](){
 
     //     if(state==DeviceState::Connected || state==DeviceState::Reconnecting){
@@ -50,10 +50,10 @@ DeviceManager::DeviceManager(QObject *parent)
 
     dbThread->start();
 
-    //定时采样数据存入db
+    // 定时采样写库，避免每帧都触发数据库I/O。
     connect(m_dbSampleTimer,&QTimer::timeout,this,[=](){
 
-        if(state != DeviceState::Connected || m_latestData.actualTemperature == 0) return;//加一个判断
+        if(state != DeviceState::Connected || m_latestData.actualTemperature == 0) return;
         QMutexLocker locker(&m_dataMutex);
         emit sigSaveEnvData(m_latestData.actualTemperature, m_latestData.actualHumidity);
     });
@@ -63,7 +63,7 @@ DeviceManager::DeviceManager(QObject *parent)
 DeviceManager::~DeviceManager(){
     teardownPipeline();
 
-    if (dbThread != nullptr && dbThread->isRunning()) {//！
+    if (dbThread != nullptr && dbThread->isRunning()) {
         dbThread->quit();
         dbThread->wait();
     }
@@ -98,14 +98,8 @@ void DeviceManager::checkSoftAlarm(double currentValue, AlarmRule& rule) {
 
 void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
 
-    responseTimer.restart();// 重启定时器
-    // qDebug()<<"door"<<newData.doorStatus;
-    // qDebug()<<"temp"<<newData.actualTemperature;
-    // qDebug()<<"hum"<<newData.actualHumidity;
-    // qDebug()<<"alarm"<<newData.alarmCode;
-    // qDebug()<<"compress"<<newData.compressorStatus;
-    if(state == DeviceState::Connecting || state == DeviceState::Reconnecting){ // 恢复连接
-        //emit logBusiness("INFO", "网络波动已恢复");
+    responseTimer.restart();
+    if(state == DeviceState::Connecting || state == DeviceState::Reconnecting){
         setState(DeviceState::Connected);
     }
 
@@ -116,7 +110,7 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
     if (m_latestData.doorStatus != newData.doorStatus) {
 
          qWarning() << "[系统事件] 箱门状态发生改变，当前:" << newData.doorStatus;
-        QString statusStr = (newData.doorStatus == 1)? "被打开" :"已关闭";
+        QString statusStr = (newData.doorStatus == 1) ? "被打开" : "已关闭";
         QString level = (newData.doorStatus == 1)? "WARNING" : "INFO";
         QString logMsg = QString("冷藏箱门%1").arg(statusStr);
 
@@ -128,7 +122,7 @@ void DeviceManager::onRealtimeDataParsed(const DeviceData &newData){
 
         qWarning() << "[系统事件] 压缩机状态发生改变，当前:" << newData.compressorStatus;
 
-        QString statusStr = (newData.compressorStatus == 1)? "启动制冷" : "停止待机";
+        QString statusStr = (newData.compressorStatus == 1) ? "启动制冷" : "停止待机";
         QString logMsg = QString("压缩机%1").arg(statusStr);
 
         emit logBusiness("INFO",logMsg); // 记录日志
@@ -163,26 +157,13 @@ void DeviceManager::onConfigParamLoaded(const ConfigData &data){
         setState(DeviceState::Connected);
     }
 
-    // QMutexLocker locker(&m_configMutex);
-    // QString msg = QString("修改参数配置：%1 %2 %3 %4 %5 %6")//
-    //                   .arg(data.targetTemperature)
-    //                   .arg(data.tempHighLimit)
-    //                   .arg(data.tempLowLimit)
-    //                   .arg(data.targetHumidity)
-    //                   .arg(data.humidHighLimit)
-    //                   .arg(data.humidLowLimit);
-    // m_tempRule = {"温度", "℃", data.tempHighLimit, data.tempLowLimit};
-    // m_humRule = {"湿度", "%", data.humidHighLimit, data.humidLowLimit};
-    // qDebug()<< msg;
     emit configReturned(data);
-    //emit logBusiness("INFO", "成功修改参数配置");
-    //emit sigSaveEventLog("SYS_EVENT", "成功修改参数配置");
 }
 
 void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
 
-    responseTimer.restart();// 重启定时器
-    if(state == DeviceState::Connecting || state == DeviceState::Reconnecting){ // 恢复连接
+    responseTimer.restart();
+    if(state == DeviceState::Connecting || state == DeviceState::Reconnecting){
         setState(DeviceState::Connected);
     }
 
@@ -195,21 +176,13 @@ void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
     }
 }
 
-// void DeviceManager::onSendData(char funcCode, const QByteArray &dataContent){
-//     Frame frame;
-//     frame.funcCode = funcCode;
-//     frame.payload = dataContent;
-//     emit sendFrame(frame);
-// }
 
 void DeviceManager::requestReadParam(){
-    //QMutexLocker locker(&m_configMutex);
     qDebug()<<"读取参数指令下发";
     emit packReadParam();
 }
 
 void DeviceManager::requestWriteParam(const ConfigData &data){
-    //QMutexLocker locker(&m_configMutex);
     QString msg = QString("修改参数配置：%1 %2 %3 %4 %5 %6")//
                       .arg(data.targetTemperature)
                       .arg(data.tempHighLimit)
@@ -225,11 +198,12 @@ void DeviceManager::requestWriteParam(const ConfigData &data){
     emit sigSaveEventLog("SYS_EVENT", "成功修改参数配置");
 }
 
-void DeviceManager::requestCmd(const QString &cmd){//default强制消音
+void DeviceManager::requestCmd(const QString &cmd){
     emit packCmd(cmd);
 }
 
 void DeviceManager::requestOpen(int type,QString portName,int baudRate){
+    // 缓存最近连接参数，供自动重连复用
     m_lastConnType = type;
     m_lastTarget = portName;
     m_lastPortOrBaud = baudRate;
@@ -237,20 +211,18 @@ void DeviceManager::requestOpen(int type,QString portName,int baudRate){
     m_autoReconnectEnabled = true;
 
     setupPipeline(type);
-    setState(DeviceState::Connecting);//连接成功后会在onRealtimeDataParsed里切换到Connected状态
+    setState(DeviceState::Connecting); // 连接成功后在解析回包时切换为Connected
     emit signalOpen(portName,baudRate);
 }
 
 void DeviceManager::requestClose(){
     m_autoReconnectEnabled = false;
-    //先向子线程投递事件，再结束子线程（tearPipe）
+    // 先通知底层关闭，再由状态链路收敛到Disconnected。
     emit signalClose();
     qDebug()<<"device close";
-    //setState(DeviceState::Disconnected);
-    //teardownPipeline();
 }
 
-//统一管理状态切换
+// 统一管理状态切换
 void DeviceManager::setState(DeviceState newState){
     if(state == newState) return;
     state = newState;
@@ -262,8 +234,8 @@ void DeviceManager::setState(DeviceState newState){
         timeoutTimer->start();
         responseTimer.start();
         m_dbSampleTimer->start();
-        retryCount=0;//
-        requestReadParam();//每次连接都读取静默参数
+        retryCount=0;
+        requestReadParam(); // 每次连接后主动拉取一次参数，保证UI与设备配置一致
         qDebug()<<"设备已在线";
         emit logBusiness("INFO", "设备已在线");
         break;
@@ -282,10 +254,10 @@ void DeviceManager::setState(DeviceState newState){
 
     case DeviceState::Error:
         m_autoReconnectEnabled = false;
-        timeoutTimer->stop();//顺序
+        timeoutTimer->stop();
         timer->stop();
         m_dbSampleTimer->stop();
-        emit logBusiness("ERROR", "设备未启动或已离线");//
+        emit logBusiness("ERROR", "设备未启动或已离线");
         requestClose();
         break;
 
@@ -324,10 +296,10 @@ void DeviceManager::tryAutoReconnect(const QString &reason)
 
 void DeviceManager::setupPipeline(int type){
 
-    //清理已有线程/对象
+    // 清理已有线程/对象，避免重复建链
     teardownPipeline();
 
-    workThread = new QThread();//注意内存泄漏
+    workThread = new QThread();
 
     if(type == 0){
         worker = new SerialWorker;
@@ -339,7 +311,7 @@ void DeviceManager::setupPipeline(int type){
     worker->moveToThread(workThread);
     parser->moveToThread(workThread);
 
-    //连接/断开连接
+    // 连接/断开链路
     connect(this,&DeviceManager::signalOpen,worker,&CommWorker::open);
     connect(this,&DeviceManager::signalClose,worker,&CommWorker::close);
 
@@ -350,19 +322,17 @@ void DeviceManager::setupPipeline(int type){
     connect(this,&DeviceManager::packCmd,parser,&ProtocolParser::onPackCmd);
     connect(parser,&ProtocolParser::sendRawData,worker,&CommWorker::sendData);
 
-    //接收链路
+    // 接收链路
     connect(worker,&CommWorker::rawDataReceived,parser,&ProtocolParser::onRawDataReceived);
     //connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
     connect(parser,&ProtocolParser::RealtimeDataParsed,this,&DeviceManager::onRealtimeDataParsed);
     connect(parser,&ProtocolParser::configParamLoaded,this,&DeviceManager::onConfigParamLoaded);
     connect(parser,&ProtocolParser::cmdAckReceived,this,&DeviceManager::onCmdAckReceived);
 
-    //状态链路
+    // 状态链路
     connect(worker,&CommWorker::StatusChanged,this,[=](bool isOpen){
         if(isOpen){
             setState(DeviceState::Connecting);
-           // setupPipeline(type);
-            //emit statusChanged(true);
         }else{
             if (m_autoReconnectEnabled && state != DeviceState::Disconnected) {
                 tryAutoReconnect("连接断开");
@@ -373,16 +343,16 @@ void DeviceManager::setupPipeline(int type){
         }
     });
 
-    //日志链路
+    // 日志链路
     connect(worker, &CommWorker::logComm, this, &DeviceManager::logBusiness);
     connect(parser, &ProtocolParser::logProtocol, this, &DeviceManager::logBusiness);
 
-    //错误
+    // 预留扩展: 独立错误信号链路（与日志链路分离）
     // connect(worker,&CommWorker::errorOccurred,this,[=](QString errorMsg){//指定this
     //    emit errorOccurred(errorMsg);
     // });
 
-    //线程结束后删除对象
+    // 线程结束后删除对象
     connect(workThread, &QThread::finished, worker, &CommWorker::deleteLater);
     connect(workThread, &QThread::finished, parser, &ProtocolParser::deleteLater);
     connect(workThread, &QThread::finished, workThread, &QThread::deleteLater);
@@ -393,11 +363,11 @@ void DeviceManager::setupPipeline(int type){
 void DeviceManager::teardownPipeline(){
 
     if (workThread != nullptr && workThread->isRunning()) {
-        workThread->quit(); // 请求退出事件循环
-        workThread->wait(); // 主线程等待子线程真正退出；线程结束了，不再用worker了，此时删它就安全
+        workThread->quit();
+        workThread->wait();
     }
 
-    // 指针置空，防止野指针
+    // 指针置空，避免悬挂引用
     worker = nullptr;
     parser = nullptr;
     workThread = nullptr;
