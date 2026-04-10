@@ -96,12 +96,20 @@ private:
     DatabaseManager *dbManager = nullptr;
 
     void setState(DeviceState newState);
+    void tryAutoReconnect(const QString &reason); // 自动重连逻辑
     void setupPipeline(int type);
     void teardownPipeline();
 
     void checkSoftAlarm(double currentValue, AlarmRule &rule);// 软报警检测
     AlarmRule m_tempRule{"温度", "℃", 8.0, 2.0};
     AlarmRule m_humRule{"湿度", "%", 75.0, 35.0};
+
+    // 连接配置记录，用于自动重连
+    int m_lastConnType = 0; // 0=串口, 1=TCP
+    QString m_lastTarget;   
+    int m_lastPortOrBaud = 0;
+    bool m_hasConnProfile = false; // 是否有连接配置
+    bool m_autoReconnectEnabled = false; // 是否启用自动重连
 
 };
 

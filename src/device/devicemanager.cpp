@@ -28,17 +28,7 @@ DeviceManager::DeviceManager(QObject *parent)
     connect(timeoutTimer,&QTimer::timeout,this,[=](){
         if(!responseTimer.isValid()) return;
         if(responseTimer.elapsed() > 2000){
-            if(state == DeviceState::Connecting){ // 下位机未启动
-                setState(DeviceState::Error);
-                return;
-            }
-            setState(DeviceState::Reconnecting); // 下位机断连
-            retryCount++;
-            emit logBusiness("WARNING", QString("检测到超时！正在重连...%1/5...").arg(retryCount));
-            //requestOpen();
-            if(retryCount>4){
-                setState(DeviceState::Error);
-            }
+            tryAutoReconnect("通信超时");
         }
     });
 
@@ -240,12 +230,19 @@ void DeviceManager::requestCmd(const QString &cmd){//default强制消音
 }
 
 void DeviceManager::requestOpen(int type,QString portName,int baudRate){
-    //setState(DeviceState::Connecting);//成功连接才设置Connected
+    m_lastConnType = type;
+    m_lastTarget = portName;
+    m_lastPortOrBaud = baudRate;
+    m_hasConnProfile = true; 
+    m_autoReconnectEnabled = true;
+
     setupPipeline(type);
+    setState(DeviceState::Connecting);//连接成功后会在onRealtimeDataParsed里切换到Connected状态
     emit signalOpen(portName,baudRate);
 }
 
 void DeviceManager::requestClose(){
+    m_autoReconnectEnabled = false;
     //先向子线程投递事件，再结束子线程（tearPipe）
     emit signalClose();
     qDebug()<<"device close";
@@ -284,6 +281,7 @@ void DeviceManager::setState(DeviceState newState){
         break;
 
     case DeviceState::Error:
+        m_autoReconnectEnabled = false;
         timeoutTimer->stop();//顺序
         timer->stop();
         m_dbSampleTimer->stop();
@@ -300,6 +298,28 @@ void DeviceManager::setState(DeviceState newState){
         break;
 
     }
+}
+
+void DeviceManager::tryAutoReconnect(const QString &reason)
+{
+    if (!m_autoReconnectEnabled || !m_hasConnProfile) {
+        setState(DeviceState::Error);
+        return;
+    }
+
+    retryCount++;
+    if (retryCount > 5) {
+        m_autoReconnectEnabled = false;
+        setState(DeviceState::Error);
+        emit logBusiness("ERROR", "自动重连失败，已超过最大重试次数");
+        return;
+    }
+
+    setState(DeviceState::Reconnecting);
+    emit logBusiness("WARNING", QString("%1，正在自动重连...%2/5").arg(reason).arg(retryCount));
+
+    requestOpen(m_lastConnType, m_lastTarget, m_lastPortOrBaud);
+    responseTimer.restart();
 }
 
 void DeviceManager::setupPipeline(int type){
@@ -344,10 +364,12 @@ void DeviceManager::setupPipeline(int type){
            // setupPipeline(type);
             //emit statusChanged(true);
         }else{
-
-            teardownPipeline();
-            setState(DeviceState::Disconnected);
-            //emit statusChanged(false);
+            if (m_autoReconnectEnabled && state != DeviceState::Disconnected) {
+                tryAutoReconnect("连接断开");
+            } else {
+                teardownPipeline();
+                setState(DeviceState::Disconnected);
+            }
         }
     });
 
