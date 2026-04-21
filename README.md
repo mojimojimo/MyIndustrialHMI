@@ -1,14 +1,14 @@
 # 医疗级冷链设备监控系统
 
-!\[C++](https://img.shields.io/badge/C++-11-blue.svg)
-!\[Qt](https://img.shields.io/badge/Qt-6.5.3\_Widgets-41CD52.svg)
-!\[CMake](https://img.shields.io/badge/CMake-Build\_System-red.svg)
-!\[SQLite](https://img.shields.io/badge/SQLite-Database-003B57.svg)
+![C++](https://img.shields.io/badge/c++-11-%2300599C?style=flat&logo=c%2B%2B&logoColor=white)
+![Qt](https://img.shields.io/badge/Qt-6.5.3-%2341CD52?style=flat&logo=qt&logoColor=white)
+![CMake](https://img.shields.io/badge/CMake-Build%20System-%23008FBA?style=flat&logo=cmake&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-Database-%23003B57?style=flat&logo=sqlite&logoColor=white)
 
 ## 📌 项目背景 | Background
 
 在医疗领域，疫苗、血液及特定生物制品对储存环境的温湿度有着极度严苛的要求。温湿度超限可能导致生物制品失效，甚至引发医疗事故。
-本项目是一个专为医疗冷链设备（如疫苗冷藏箱、血液冷藏柜）研发的 **PC 端 HMI（人机交互）系统**。系统向下支持双模通信（串口/TCP）采集设备数据，向上提供实时的状态监控、参数配置、异常告警拦截，并构建了基于 SQLite 的完整“监控-告警-追溯”数据闭环。
+本项目是一个专为医疗冷链设备（如疫苗冷藏箱、血液冷藏柜）研发的 **PC 端 HMI（人机交互）系统**，并基于 **STM32 单片机构建简易设备侧**，完成真实串口通信链路联调与协议交互验证。系统向下支持双模通信（串口/TCP）采集设备数据，向上提供实时的状态监控、参数配置、异常告警拦截，并构建了基于 SQLite 的完整“监控-告警-追溯”数据闭环。
 
 ## 🏗️ 架构设计 | Architecture
 
@@ -44,6 +44,18 @@
 |:-:|:-:|:-:|:-:|:-:|:-:|
 |`0xAA 0x55`|`0x01` / `0x10` / ...|`0x00 \~ 0xFF`|`DeviceData` / `ConfigData`/ ...|`Sum Check`|`0xFF`|
 
+## 下位机联调与协议验证（STM32）：
+
+ 基于 STM32F429（正点原子开发板）构建简易下位机系统，通过串口与上位机完成数据交互闭环验证。
+* 实现温湿度采集（DHT11）并通过串口周期上报，上位机完成协议解析与实时显示
+* 设计并实现双向指令交互流程：
+  * 上位机下发“读取参数”指令，下位机返回当前配置
+  * 上位机下发“参数配置”指令，下位机更新参数并返回 ACK
+* 实现基础控制链路：
+  * 湿度越界触发 LED 告警
+  * 上位机远程下发消音指令控制设备状态
+* 通过 LCD 显示本地状态与指令响应，辅助验证通信链路正确性
+
 ## 📸 系统截图 | Screenshots
 
 |实时监控大屏|参数配置与指令下发|
@@ -51,6 +63,3 @@
 |![实时监控](https://github.com/mojimojimo/MyIndustrialHMI/blob/master/images/realtime.png?raw=true)|![参数配置](https://github.com/mojimojimo/MyIndustrialHMI/blob/master/images/config.png?raw=true)|
 |**历史追溯与 CSV 导出**|**原始报文与分级日志**|
 |![历史数据](https://github.com/mojimojimo/MyIndustrialHMI/blob/master/images/history.png?raw=true)|![分级日志](https://github.com/mojimojimo/MyIndustrialHMI/blob/master/images/logs.png?raw=true)|
-
-
-
