@@ -79,11 +79,13 @@ private slots:
     void test_configParamLoaded();
     void test_cmdAckReceived();
 
+    //测试 processRawData和ring buffer的边界情况
     void test_halfPacket();
     void test_stickyPackets();
     void test_noiseBeforeFrame();
     void test_ringWrapAroundFrame();
     void test_ringOverflowDrop();
+    void test_ringOverflowKeepNewest();
 
     void test_onPackReadParam();
     void test_onPackWriteParam();
@@ -130,6 +132,7 @@ void TestProtocolParser::test_configParamLoaded()
 
     QCOMPARE(spy.count(), 1);
 
+    
     const QList<QVariant> args = spy.takeFirst();
     ConfigData config = qvariant_cast<ConfigData>(args.at(0));
 
@@ -179,6 +182,14 @@ void TestProtocolParser::test_halfPacket()
 
     parser.onRawDataReceived(part2);
     QCOMPARE(spy.count(), 1);
+    const QList<QVariant> args = spy.takeFirst();
+    DeviceData data = qvariant_cast<DeviceData>(args.at(0));
+
+    QVERIFY(qAbs(data.actualTemperature - 25.3) < 0.0001);
+    QVERIFY(qAbs(data.actualHumidity - 56.7) < 0.0001);
+    QCOMPARE(data.doorStatus, static_cast<uint8_t>(1));
+    QCOMPARE(data.compressorStatus, static_cast<uint8_t>(0));
+    QCOMPARE(data.alarmCode, static_cast<uint8_t>(2));
 }
 
 void TestProtocolParser::test_stickyPackets()
@@ -197,6 +208,26 @@ void TestProtocolParser::test_stickyPackets()
     parser.onRawDataReceived(sticky);
 
     QCOMPARE(spy.count(), 2);
+    {
+        const QList<QVariant> args = spy.takeFirst();
+        DeviceData data = qvariant_cast<DeviceData>(args.at(0));
+
+        QVERIFY(qAbs(data.actualTemperature - 25.3) < 0.0001);
+        QVERIFY(qAbs(data.actualHumidity - 56.7) < 0.0001);
+        QCOMPARE(data.doorStatus, static_cast<uint8_t>(1));
+        QCOMPARE(data.compressorStatus, static_cast<uint8_t>(0));
+        QCOMPARE(data.alarmCode, static_cast<uint8_t>(2));
+    }
+    {
+        const QList<QVariant> args = spy.takeFirst();
+        DeviceData data = qvariant_cast<DeviceData>(args.at(0));
+
+        QVERIFY(qAbs(data.actualTemperature - 26.1) < 0.0001);
+        QVERIFY(qAbs(data.actualHumidity - 57.2) < 0.0001);
+        QCOMPARE(data.doorStatus, static_cast<uint8_t>(0));
+        QCOMPARE(data.compressorStatus, static_cast<uint8_t>(1));
+        QCOMPARE(data.alarmCode, static_cast<uint8_t>(0));
+    }
 }
 
 void TestProtocolParser::test_noiseBeforeFrame()
@@ -216,6 +247,14 @@ void TestProtocolParser::test_noiseBeforeFrame()
     parser.onRawDataReceived(noisyData);
 
     QCOMPARE(spy.count(), 1);
+    const QList<QVariant> args = spy.takeFirst();
+    DeviceData data = qvariant_cast<DeviceData>(args.at(0));
+
+    QVERIFY(qAbs(data.actualTemperature - 25.3) < 0.0001);
+    QVERIFY(qAbs(data.actualHumidity - 56.7) < 0.0001);
+    QCOMPARE(data.doorStatus, static_cast<uint8_t>(1));
+    QCOMPARE(data.compressorStatus, static_cast<uint8_t>(0));
+    QCOMPARE(data.alarmCode, static_cast<uint8_t>(2));
 }
 
 void TestProtocolParser::test_ringWrapAroundFrame()
@@ -265,16 +304,57 @@ void TestProtocolParser::test_ringOverflowDrop()
     QCOMPARE(dataSpy.count(), 0);
 }
 
+void TestProtocolParser::test_ringOverflowKeepNewest()
+{
+    ProtocolParser parser;
+    QSignalSpy logSpy(&parser, &ProtocolParser::logProtocol);
+    QSignalSpy dataSpy(&parser, &ProtocolParser::RealtimeDataParsed);
+
+    // 先放入5B半包，保证ring中有“旧数据”可被后续溢出淘汰。
+    QByteArray oldHalf = buildPacket(FUNC_REPORT_ALL_DATA, buildRealtimePayload(20.0, 50.0, 1, 0, 0)).left(5);
+    parser.onRawDataReceived(oldHalf);
+    QCOMPARE(dataSpy.count(), 0);
+
+    // 第二次输入占满整个ring，触发“丢旧保新”；尾部放一个完整新帧，期望可被解析。
+    QByteArray latestFrame = buildPacket(FUNC_REPORT_ALL_DATA, buildRealtimePayload(26.6, 60.1, 0, 1, 0));
+    QByteArray burst(65536 - latestFrame.size(), static_cast<char>(0x00));
+    burst.append(latestFrame);
+
+    parser.onRawDataReceived(burst);
+
+    bool hasDropOldWarning = false;
+    for (int i = 0; i < logSpy.count(); ++i) {
+        const QList<QVariant> args = logSpy.at(i);
+        const QString level = args.at(0).toString();
+        const QString message = args.at(1).toString();
+        if (level == "WARNING" && message.contains("丢弃旧数据")) {
+            hasDropOldWarning = true;
+            break;
+        }
+    }
+
+    QVERIFY(hasDropOldWarning);
+    QCOMPARE(dataSpy.count(), 1);
+
+    const QList<QVariant> parsedArgs = dataSpy.takeFirst();
+    const DeviceData parsedData = qvariant_cast<DeviceData>(parsedArgs.at(0));
+    QVERIFY(qAbs(parsedData.actualTemperature - 26.6) < 0.0001);
+    QVERIFY(qAbs(parsedData.actualHumidity - 60.1) < 0.0001);
+    QCOMPARE(parsedData.doorStatus, static_cast<uint8_t>(0));
+    QCOMPARE(parsedData.compressorStatus, static_cast<uint8_t>(1));
+    QCOMPARE(parsedData.alarmCode, static_cast<uint8_t>(0));
+}
+
 void TestProtocolParser::test_onPackReadParam()
 {
     ProtocolParser parser;
-    QSignalSpy spy(&parser, &ProtocolParser::sendRawData);
+    QSignalSpy spy(&parser, &ProtocolParser::sendRawData);//监测是否发出信号
 
     parser.onPackReadParam();
 
     QCOMPARE(spy.count(), 1);
 
-    QByteArray sent = spy.takeFirst().at(0).toByteArray();
+    QByteArray sent = spy.takeFirst().at(0).toByteArray();//比较拼起来的是否正确
 
     QByteArray expected;
     expected.append(static_cast<char>(FRAME_HEAD_1));

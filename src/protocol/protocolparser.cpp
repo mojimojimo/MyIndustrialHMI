@@ -43,11 +43,15 @@ bool ProtocolParser::ringWrite(const QByteArray &data)
         return true;
     }
 
+    // 数据长度必须小于等于 ring 缓存总容量，否则无论如何都无法写入完整数据，直接丢弃并报警
     if (data.size() > RING_BUFFER_CAPACITY) {
         return false;
     }
-    if (ringFreeSpace() < data.size()) {
-        return false;
+
+    // 溢出策略: 丢旧保新，尽可能保留最新数据用于实时监控。
+    const int needDrop = data.size() - ringFreeSpace();
+    if (needDrop > 0) {
+        ringDrop(needDrop);
     }
 
     int tail = ringTailIndex();
@@ -288,8 +292,20 @@ void ProtocolParser::buildPacket(const Frame &frame){ // 应用层封包
 }
 
 void ProtocolParser::onRawDataReceived(const QByteArray &rawdata){
+    // 剩余空间不足时丢弃旧数据以保留新数据，避免监控数据滞后过久
+    const int freeBefore = ringFreeSpace();
+    const int droppedOldBytes = (rawdata.size() <= RING_BUFFER_CAPACITY && rawdata.size() > freeBefore)
+                                    ? (rawdata.size() - freeBefore)
+                                    : 0;
+                                    
+    // 当输入数据超过总容量时直接丢弃并报警，避免死循环;否则丢弃部分数据
     if (!ringWrite(rawdata)) {
-        emit logProtocol("WARNING", "ring buffer空间不足，本次输入已丢弃");
+        emit logProtocol("WARNING", QString("ring buffer空间不足，本次输入已丢弃(size=%1, cap=%2)")
+                                       .arg(rawdata.size())
+                                       .arg(RING_BUFFER_CAPACITY));
+    } else if (droppedOldBytes > 0) {
+        emit logProtocol("WARNING", QString("ring buffer溢出，已丢弃旧数据%1B以保留新数据")
+                                       .arg(droppedOldBytes));
     }
     processRawData();
     emit logProtocol("DEBUG", "[RX] " + rawdata.toHex(' ').toUpper());

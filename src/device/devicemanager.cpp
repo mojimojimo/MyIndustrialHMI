@@ -168,7 +168,11 @@ void DeviceManager::onCmdAckReceived(bool ack, quint8 errorCode){
     }
 
     if (ack) {
-        qDebug() << "底层执行成功！";
+        qDebug() << "底层执行成功！";//目前只在参数下发时下位机会回复ACK
+        // m_tempRule = {"温度", "℃", data.tempHighLimit, data.tempLowLimit};
+        // m_humRule = {"湿度", "%", data.humidHighLimit, data.humidLowLimit};
+        // emit logBusiness("INFO", "成功修改参数配置");// 应该等到下位机响应才记录日志和审计表
+        // emit sigSaveEventLog("SYS_EVENT", "成功修改参数配置");
         emit logBusiness("INFO", "指令执行成功");
     } else {
         QString msg = QString("设置失败，底层拒绝执行，错误码: %1").arg(errorCode);
@@ -183,18 +187,20 @@ void DeviceManager::requestReadParam(){
 }
 
 void DeviceManager::requestWriteParam(const ConfigData &data){
-    QString msg = QString("修改参数配置：%1 %2 %3 %4 %5 %6")//
+    QString msg = QString("准备修改参数配置：%1 %2 %3 %4 %5 %6")//
                       .arg(data.targetTemperature)
                       .arg(data.tempHighLimit)
                       .arg(data.tempLowLimit)
                       .arg(data.targetHumidity)
                       .arg(data.humidHighLimit)
                       .arg(data.humidLowLimit);
-    m_tempRule = {"温度", "℃", data.tempHighLimit, data.tempLowLimit};
-    m_humRule = {"湿度", "%", data.humidHighLimit, data.humidLowLimit};
     qDebug()<< msg;
     emit packWriteParam(data);
-    emit logBusiness("INFO", "成功修改参数配置");// 其实应该等到下位机响应才记录日志和审计表
+
+    // ！应该等到下位机响应才更改告警规则并记录日志和审计表
+    m_tempRule = {"温度", "℃", data.tempHighLimit, data.tempLowLimit};
+    m_humRule = {"湿度", "%", data.humidHighLimit, data.humidLowLimit};
+    emit logBusiness("INFO", "成功修改参数配置");
     emit sigSaveEventLog("SYS_EVENT", "成功修改参数配置");
 }
 
